@@ -12,128 +12,48 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 MODEL_NAME = "llama-3.3-70b-versatile"
 
 
-def generate_viva_questions(
-    context_chunks: list[str],
-    settings: dict
-) -> str:
-
+def generate_single_question(chunk_text: str, settings: dict) -> dict:
+    """
+    Takes ONE chunk and generates EXACTLY ONE question.
+    Forces the LLM to extract the exact text for the explanation.
+    """
     try:
-
-        print("🤖 AI Examiner is generating conceptual viva questions...")
-
-        # Combine compressed context
-        context = "\n\n".join(context_chunks)
-
-        # Settings
-        num_questions = settings.get("questions", "3")
-
         q_type = settings.get("type", "MCQ")
-
         difficulty = settings.get("difficulty", "Medium")
-
         domain = settings.get("domain", "General")
 
-        # Better Prompt Engineering
         prompt = f"""
-You are an expert university viva examiner.
+        You are a strict examiner. I will provide you with ONE specific text chunk from a document.
+        Your task is to generate EXACTLY ONE high-quality {difficulty} level {q_type} question from this text.
+        Focus on the domain: {domain}.
 
-Your task is to generate HIGH-QUALITY,
-CONCEPTUAL, and MEANINGFUL viva questions
-ONLY from the provided context.
+        CRITICAL RULES FOR ZERO HALLUCINATION:
+        1. The question MUST be fully answerable using ONLY the provided text chunk.
+        2. For the "explanation" field, you MUST extract and copy-paste the EXACT SENTENCE(S) from the text chunk that contains the answer. DO NOT rephrase it. DO NOT add your own words.
 
-========================
-QUESTION REQUIREMENTS
-========================
+        JSON FORMAT (STRICT):
+        {{
+            "question": "...",
+            "options": ["A. ...", "B. ...", "C. ...", "D. ..."], // Include only if MCQ
+            "correct_answer": "...",
+            "explanation": "EXACT COPY-PASTED TEXT FROM THE CHUNK GOES HERE."
+        }}
 
-Generate exactly {num_questions} {q_type} questions.
-
-Difficulty Level:
-{difficulty}
-
-Domain:
-{domain}
-
-========================
-IMPORTANT RULES
-========================
-
-1. Questions MUST:
-- test conceptual understanding
-- test reasoning ability
-- test relationships between ideas
-- focus on important concepts
-- sound like real viva/interview questions
-- require actual understanding
-
-2. PRIORITIZE:
-- definitions
-- architectures
-- workflows
-- technical concepts
-- advantages/disadvantages
-- comparisons
-- applications
-- challenges
-- reasoning-based understanding
-
-3. STRICTLY AVOID:
-- trivial questions
-- superficial MCQs
-- repeated questions
-- table-column questions
-- metadata questions
-- formatting-based questions
-- useless factual recall
-
-4. USE ONLY PROVIDED CONTEXT.
-Do NOT add external knowledge.
-
-5. RETURN ONLY VALID JSON.
-No markdown.
-No explanation outside JSON.
-
-========================
-JSON FORMAT
-========================
-
-[
-  {{
-    "question": "...",
-    "options": [
-      "A. ...",
-      "B. ...",
-      "C. ...",
-      "D. ..."
-    ],
-    "correct_answer": "A",
-    "explanation": "..."
-  }}
-]
-
-========================
-CONTEXT
-========================
-
-{context}
-"""
-
-
+        --- TEXT CHUNK ---
+        {chunk_text}
+        --- END OF TEXT CHUNK ---
+        """
 
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
-                {
-                    "role": "system",
-                    "content": "You are a strict academic viva examiner. Output MUST be valid JSON only."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
+                {"role": "system", "content": "You output strict JSON objects only. No markdown formatting."},
+                {"role": "user", "content": prompt}
             ],
-            temperature=0.3,
-            response_format={"type": "json_object"} # Groq strict JSON support
+            temperature=0.1, # Temperature bohot low rakhi hai taaki hallucination bilkul na ho
+            response_format={"type": "json_object"}
         )
+
 
 
         result = response.choices[0].message.content

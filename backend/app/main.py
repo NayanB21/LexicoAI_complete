@@ -5,6 +5,7 @@ from app.core.database import connect_to_mongo, close_mongo_connection
 from app.api.auth import router as auth_router
 from app.api.upload import router as upload_router
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.viva import router as viva_router
 
 # Lifespan context manager for startup and shutdown events
 @asynccontextmanager
@@ -30,6 +31,7 @@ app.add_middleware(
 )
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(upload_router, prefix="/api/upload", tags=["Upload"])
+app.include_router(viva_router, prefix="/api/viva", tags=["Viva"])
 @app.get("/")
 async def root():
     return {"message": "Lexico AI Backend is running with MongoDB! 🚀"}
