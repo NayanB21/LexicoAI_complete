@@ -9,7 +9,7 @@ export default function ChatScreen({ ui, viva }) {
       {ui.isVivaStarted ? (
         <ChatInterface />
       ) : (
-        <WelcomeScreen />
+        <WelcomeScreen ui={ui} viva={viva} />
       )}
 
       <VivaConfigModal ui={ui} viva={viva} />

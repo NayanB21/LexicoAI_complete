@@ -1,6 +1,7 @@
 from app.services.chunking_service import chunk_markdown_text
 from app.services.vector_db import create_vector_store 
 from app.services.ai_examiner import generate_single_question
+from app.services.content_filter import extract_badhiya_content # ✨ NAYA IMPORT
 import json
 
 async def main_process(pdf_text: str, settings: dict):
@@ -17,13 +18,24 @@ async def main_process(pdf_text: str, settings: dict):
         print("⚠️ No chunks generated. Process stopped.")
         return False
 
+    print(f"📊 Total Raw Chunks generated: {len(chunks)}")
+
+    # ✨ THE QUALITY GATE (Filter logic added here) ✨
+    filtered_good_chunks = extract_badhiya_content(chunks)
+    print(f"💎 Pure Quality Chunks remaining: {len(filtered_good_chunks)}")
+
+    if not filtered_good_chunks:
+        print("⚠️ No quality chunks left after filtering. Process stopped.")
+        return False
+
     # Previewing the first chunk just to see if it works
-    print("\n--- Preview of Chunk 1 ---")
-    print(chunks[0].page_content[:300] + "...")
+    print("\n--- Preview of Quality Chunk 1 ---")
+    print(filtered_good_chunks[0].page_content[:300] + "...")
     print("--------------------------\n")
     
     # Step 2: Create Vector Store (The Memory)
-    vector_store = create_vector_store(chunks)
+    # 🛑 Yahan sirf filtered chunks pass karne hain!
+    vector_store = create_vector_store(filtered_good_chunks)
     
     if not vector_store:
         print("⚠️ Failed to create Vector Database. Process stopped.")
