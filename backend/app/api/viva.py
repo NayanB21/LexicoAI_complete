@@ -108,8 +108,10 @@ async def upload_pdf(file: UploadFile = File(...), total_questions: int = Form(.
         print(f"Error in upload: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
 # ==========================================
-# API 2: Generate 1 Question (From Pre-Fetched Chunks)
+# API 2: Generate 1 Question (With Auto-Retry & Safety)
 # ==========================================
 @router.post("/generate")
 async def generate_question(req: GenerateRequest):
@@ -117,49 +119,92 @@ async def generate_question(req: GenerateRequest):
     if not pre_fetched_chunks:
         raise HTTPException(status_code=400, detail="Please upload a PDF first.")
 
-    # 1. Pick the chunk according to the question number
-    # Modulo operator prevents array out of bounds if user asks for more questions than we have chunks
-    chunk_index = req.current_q_no % len(pre_fetched_chunks)
-    chunk_text = pre_fetched_chunks[chunk_index]
-    print("\n" + "="*50)
-    print(f"🛑 STOP & READ: Chunk given to AI for Q{req.current_q_no + 1}")
-    print("="*50)
-    print(chunk_text)
-    print("="*50 + "\n")
-    print(f"📝 Generating Q{req.current_q_no + 1} from Priority Chunk {chunk_index + 1}")
+    # 🔄 AUTO-RETRY LOOP (Max 3 attempts to avoid bad chunks or API failures)
+    for attempt in range(3):
+        # Current question number ke hisaab se chunk uthao.
+        # Offset by attempt so we try a DIFFERENT chunk if the first one fails!
+        chunk_index = (req.current_q_no + attempt) % len(pre_fetched_chunks)
+        chunk_text = pre_fetched_chunks[chunk_index]
 
-    # 2. Generate Question based on the dense chunk
-    prompt = f"""
-    Based ONLY on the provided context, generate EXACTLY ONE {req.difficulty} level {req.q_type} question.
-    Focus on the domain: {req.domain}.
-    
-    Output strictly as a JSON object:
-    {{
-        "question": "...",
-        "options": ["A...", "B...", "C...", "D..."], // Only if MCQ, else empty array
-        "correct_answer": "..."
-    }}
+        print("\n" + "="*50)
+        print(f"🛑 STOP & READ: Chunk given to AI for Q{req.current_q_no + 1} (Attempt {attempt + 1})")
+        print("="*50)
+        print(chunk_text[:300] + "...") # Previewing only first 300 chars in terminal
+        print("="*50 + "\n")
 
-    CONTEXT:
-    {chunk_text}
-    """
+        prompt = f"""
+        You are an elite, strict University Viva Examiner.
+        Based ONLY on the provided context, generate EXACTLY ONE {req.difficulty} level {req.q_type} question.
+        Focus on the domain: {req.domain}.
+        
+        CRITICAL RULES:
+        1. If the context is just an index, table, promotional content, or lacks deep academic theory, output "is_junk": true.
+        2. Otherwise, formulate a highly challenging question. Output "is_junk": false.
+        
+        Output strictly as a valid JSON object ONLY:
+        {{
+            "is_junk": false,
+            "question": "...",
+            "options": ["A...", "B...", "C...", "D..."], // Only if MCQ, else empty array
+            "correct_answer": "..."
+        }}
 
-    # response = client.chat.completions.create(
-    #     model=MODEL_NAME,
-    #     messages=[{"role": "user", "content": prompt}],
-    #     temperature=0.3,
-    #     response_format={"type": "json_object"}
-    # )
-    
-    # q_data = json.loads(response.choices[0].message.content)
-    # q_data["hidden_context"] = chunk_text 
-    
-    # return q_data
+        CONTEXT:
+        {chunk_text}
+        """
+
+        try:
+            response = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                response_format={"type": "json_object"}
+            )
+            
+            raw_response = response.choices[0].message.content.strip()
+
+            # 🛡️ SAFETY MEASURE: Clean Markdown JSON Tags (Crucial for stability)
+            if raw_response.startswith("```json"):
+                raw_response = raw_response.replace("```json", "", 1)
+                if raw_response.endswith("```"):
+                    raw_response = raw_response[:-3]
+            elif raw_response.startswith("```"):
+                raw_response = raw_response.replace("```", "", 1)
+                if raw_response.endswith("```"):
+                    raw_response = raw_response[:-3]
+
+            # Parse JSON
+            q_data = json.loads(raw_response.strip())
+
+            # ✨ THE QUALITY CHECK ✨
+            if not q_data.get("is_junk", False):
+                print(f"✅ Awesome Question Generated from Chunk {chunk_index + 1}")
+                # Inject the context so the Evaluator API knows how to check the answer
+                q_data["hidden_context"] = chunk_text 
+                return q_data
+            else:
+                print(f"🗑️ AI rejected Chunk {chunk_index + 1} as JUNK. Trying next chunk...")
+
+        except json.JSONDecodeError:
+            print(f"⚠️ Attempt {attempt + 1}: AI returned invalid JSON format. Retrying...")
+            continue
+        except Exception as e:
+            print(f"⚠️ Attempt {attempt + 1}: API Error occurred - {e}")
+            continue
+
+    # 🚨 FALLBACK: Agar 3 attempts ke baad bhi kuch na mile (Worst case scenario)
+    print("❌ Failed to generate a good question after 3 attempts. Sending fallback.")
     return {
-        "question": "Sample Question based on the chunk.",
+        "question": "Discuss the primary concepts highlighted in this section in detail.",
         "options": [],
-        "correct_answer": "Sample Answer"
+        "correct_answer": "Subjective evaluation based on context.",
+        "hidden_context": pre_fetched_chunks[req.current_q_no % len(pre_fetched_chunks)]
     }
+    # return {
+    #     "question": "Sample Question based on the chunk.",
+    #     "options": [],
+    #     "correct_answer": "Sample Answer"
+    # }
 
 # ==========================================
 # API 3: Evaluate Answer
