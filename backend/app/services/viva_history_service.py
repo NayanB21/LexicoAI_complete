@@ -18,6 +18,8 @@ def _serialize_history_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
         "attempt_no": doc.get("attempt_no", 1),
         "reattempt_count": doc.get("reattempt_count", 0),
         "attempts": doc.get("attempts", []),
+        "performance_analysis": doc.get("performance_analysis"),
+        "has_analysis": doc.get("performance_analysis") is not None,
     }
 
 
@@ -125,6 +127,7 @@ async def list_viva_sessions(db, user_id: str, limit: int = 30, skip: int = 0) -
             "attempt_no": doc.get("attempt_no", 1),
             "source_file_name": doc.get("source_file_name"),
             "reattempt_count": doc.get("reattempt_count", 0),
+            "has_analysis": doc.get("performance_analysis") is not None,
         }
         for doc in docs
     ]
@@ -137,3 +140,20 @@ async def get_viva_session_by_id(db, user_id: str, session_id: str) -> Optional[
     if not doc:
         return None
     return _serialize_history_doc(doc)
+
+
+async def save_performance_analysis(
+    db, user_id: str, session_id: str, analysis: Dict[str, Any]
+) -> bool:
+    now = datetime.now(timezone.utc)
+    analysis_with_meta = {**analysis, "generated_at": now}
+
+    result = await db["viva_sessions"].update_one(
+        {
+            "_id": ObjectId(session_id),
+            "user_id": ObjectId(user_id),
+            "performance_analysis": {"$exists": False},
+        },
+        {"$set": {"performance_analysis": analysis_with_meta, "updated_at": now}},
+    )
+    return result.modified_count > 0

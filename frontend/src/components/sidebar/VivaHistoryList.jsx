@@ -37,6 +37,9 @@ export default function VivaHistoryList({ sessions = [], isLoading }) {
             ) : (
               <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">Completed</span>
             )}
+            {session.has_analysis ? (
+              <span className="rounded-md bg-purple-500/15 px-1.5 py-0.5 text-[10px] text-purple-300">AI report</span>
+            ) : null}
           </div>
           <p className="mt-1 text-xs text-gray-400">
             {session.score}/{session.attempted_questions ?? session.total} · {session.difficulty} ·{' '}

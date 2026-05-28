@@ -67,6 +67,35 @@ export const useVivaHistory = (token) => {
     [token],
   );
 
+  const generateAnalysis = useCallback(
+    async (sessionId) => {
+      if (!token) return null;
+      const res = await fetch(buildApiUrl(`/api/viva/history/${sessionId}/analysis`), {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+      });
+      if (res.status === 409) {
+        const detail = await getSessionDetail(sessionId);
+        return detail?.performance_analysis ?? null;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const detail = body.detail;
+        const message =
+          typeof detail === 'string'
+            ? detail
+            : Array.isArray(detail)
+              ? detail[0]?.msg
+              : 'Failed to generate performance analysis';
+        throw new Error(message || 'Failed to generate performance analysis');
+      }
+      const data = await res.json();
+      await fetchHistory();
+      return data.performance_analysis;
+    },
+    [token, fetchHistory, getSessionDetail],
+  );
+
   const appendReattempt = useCallback(
     async (sessionId, payload) => {
       if (!token) return null;
@@ -91,6 +120,7 @@ export const useVivaHistory = (token) => {
     fetchHistory,
     saveSession,
     getSessionDetail,
+    generateAnalysis,
     appendReattempt,
   };
 };

@@ -11,11 +11,13 @@ from app.models.viva_history import (
     VivaSessionListItem,
     VivaSessionReattemptRequest,
 )
+from app.services.viva_analysis_service import generate_performance_analysis
 from app.services.viva_history_service import (
     append_reattempt,
     create_viva_session,
     get_viva_session_by_id,
     list_viva_sessions,
+    save_performance_analysis,
 )
 
 router = APIRouter()
@@ -73,6 +75,54 @@ async def save_reattempt(
     if not updated:
         raise HTTPException(status_code=404, detail="Session not found")
     return {"success": True, "session_id": session_id}
+
+
+@router.post("/{session_id}/analysis", status_code=201)
+async def generate_viva_performance_analysis(
+    session_id: str, token: str = Depends(oauth2_scheme)
+):
+    db = get_db()
+    user_id = _decode_user_id(token)
+
+    if not ObjectId.is_valid(session_id):
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session = await get_viva_session_by_id(db, user_id, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if session.get("performance_analysis"):
+        raise HTTPException(
+            status_code=409,
+            detail="Performance analysis already exists for this session and cannot be regenerated.",
+        )
+
+    try:
+        analysis = await generate_performance_analysis(session)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail="Failed to generate performance analysis."
+        ) from exc
+
+    saved = await save_performance_analysis(db, user_id, session_id, analysis)
+    if not saved:
+        existing = await get_viva_session_by_id(db, user_id, session_id)
+        if existing and existing.get("performance_analysis"):
+            return {
+                "success": True,
+                "session_id": session_id,
+                "performance_analysis": existing["performance_analysis"],
+            }
+        raise HTTPException(status_code=500, detail="Failed to save performance analysis.")
+
+    stored = await get_viva_session_by_id(db, user_id, session_id)
+    return {
+        "success": True,
+        "session_id": session_id,
+        "performance_analysis": stored["performance_analysis"],
+    }
 
 
 @router.get("/{session_id}", response_model=VivaSessionDetail)

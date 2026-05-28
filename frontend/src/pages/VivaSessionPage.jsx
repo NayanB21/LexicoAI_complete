@@ -34,6 +34,8 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
   });
   const [isRuntimeActive, setIsRuntimeActive] = useState(false);
   const [runtimeKey, setRuntimeKey] = useState(0);
+  const [savedSessionId, setSavedSessionId] = useState(null);
+  const [performanceAnalysis, setPerformanceAnalysis] = useState(null);
 
   const handleChange = (field, value) => {
     setSetup((prev) => ({ ...prev, [field]: value }));
@@ -66,10 +68,20 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
     const payload = buildHistoryPayload(sessionData, fileName);
 
     try {
-      await vivaHistory.saveSession(payload);
+      const data = await vivaHistory.saveSession(payload);
+      if (data?.session_id) {
+        setSavedSessionId(data.session_id);
+      }
     } catch (error) {
       console.error('Failed to persist viva session history:', error);
     }
+  };
+
+  const handleGenerateAnalysis = async () => {
+    if (!savedSessionId || !vivaHistory?.generateAnalysis) return null;
+    const analysis = await vivaHistory.generateAnalysis(savedSessionId);
+    setPerformanceAnalysis(analysis);
+    return analysis;
   };
 
   const handleReattempt = () => {
@@ -77,6 +89,8 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
       alert('Document context is not available. Please upload the PDF again.');
       return;
     }
+    setSavedSessionId(null);
+    setPerformanceAnalysis(null);
     setRuntimeKey((prev) => prev + 1);
   };
 
@@ -146,6 +160,10 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
               initialSetupConfig={runtimeConfig}
               onSessionComplete={handleSessionComplete}
               onReattempt={handleReattempt}
+              sessionId={savedSessionId}
+              performanceAnalysis={performanceAnalysis}
+              hasAnalysis={!!performanceAnalysis}
+              onGenerateAnalysis={handleGenerateAnalysis}
             />
           </section>
         )}

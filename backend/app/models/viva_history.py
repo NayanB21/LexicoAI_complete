@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel
 
@@ -73,6 +73,7 @@ class VivaSessionListItem(BaseModel):
     attempt_no: int = 1
     source_file_name: Optional[str] = None
     reattempt_count: int = 0
+    has_analysis: bool = False
 
 
 class VivaSessionDetail(BaseModel):
@@ -88,3 +89,5 @@ class VivaSessionDetail(BaseModel):
     attempt_no: int = 1
     reattempt_count: int = 0
     attempts: List[VivaAttemptRecord] = []
+    performance_analysis: Optional[Any] = None
+    has_analysis: bool = False
