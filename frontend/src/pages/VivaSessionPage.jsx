@@ -1,8 +1,29 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import VivaSessionWelcome from '../components/viva-session/VivaSessionWelcome';
+import VivaSetupWizard from '../components/viva-session/VivaSetupWizard';
 
 export default function VivaSessionPage({ vivaSession }) {
   const fileName = vivaSession?.uploadedFileName || 'Untitled Document';
+  const [currentStep, setCurrentStep] = useState(0);
+  const [setup, setSetup] = useState({
+    questions: null,
+    mode: '',
+    difficulty: '',
+    questionType: '',
+  });
+
+  const handleChange = (field, value) => {
+    setSetup((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleNext = () => {
+    setCurrentStep((prev) => Math.min(prev + 1, 4));
+  };
+
+  const handleBack = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
+  };
 
   return (
     <div className="min-h-dvh bg-[#050914] text-gray-100">
@@ -33,10 +54,22 @@ export default function VivaSessionPage({ vivaSession }) {
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500">
           <VivaSessionWelcome />
 
-          <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6">
-            <p className="text-sm text-gray-300">
-              Setup wizard will be added in Phase 2. Your document is ready and this page shell is now active.
-            </p>
+          <VivaSetupWizard
+            currentStep={currentStep}
+            setup={setup}
+            onChange={handleChange}
+            onNext={handleNext}
+            onBack={handleBack}
+          />
+
+          <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Current Selections (UI State Only)</p>
+            <div className="mt-3 grid gap-2 text-sm text-gray-200 md:grid-cols-2">
+              <p>Questions: <span className="text-indigo-300">{setup.questions ?? '-'}</span></p>
+              <p>Mode: <span className="text-indigo-300">{setup.mode || '-'}</span></p>
+              <p>Difficulty: <span className="text-indigo-300">{setup.difficulty || '-'}</span></p>
+              <p>Question Type: <span className="text-indigo-300">{setup.questionType || '-'}</span></p>
+            </div>
           </section>
         </div>
       </main>
