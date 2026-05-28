@@ -4,12 +4,12 @@ import { useVivaChat } from '../../../hooks/useVivaChat';
 import ChatBackground from './ChatBackground';
 import MessageBubble from './MessageBubble';
 
-const ChatInterface = ({ initialSetupConfig = null }) => {
+const ChatInterface = ({ initialSetupConfig = null, onSessionComplete = null }) => {
   // Saara logic aur states Hook se aa gaya!
   const { 
     messages, isLoading, settings, score, messagesEndRef, 
     handleOptionSelect, fetchNextQuestion, handleAnswerSubmit, setSetupStep, setVivaState, addMessage 
-  } = useVivaChat(initialSetupConfig);
+  } = useVivaChat(initialSetupConfig, { onSessionComplete });
 
   const handlers = { handleOptionSelect, fetchNextQuestion, handleAnswerSubmit, setSetupStep, setVivaState, addMessage };
 

@@ -1,7 +1,8 @@
 import SettingsModal from './SlidebarComp/SettingsModal'
 import UserProfileModal from './SlidebarComp/UserProfileModal'
+import VivaHistoryList from './sidebar/VivaHistoryList'
 
-export default function Sidebar({ ui ,auth}) {
+export default function Sidebar({ ui ,auth, vivaHistory }) {
     const userName = auth?.user?.name || "Loading...";
 
   return (
@@ -13,6 +14,7 @@ export default function Sidebar({ ui ,auth}) {
         
         <div className="flex-1 p-3 md:p-4 overflow-y-auto">
           <p className="text-sm text-gray-400 mb-2">Recent Vivas</p>
+          <VivaHistoryList sessions={vivaHistory?.sessions} isLoading={vivaHistory?.isLoading} />
         </div>
 
         <div className="p-3 md:p-4 border-t border-gray-700 flex items-center justify-between gap-2">

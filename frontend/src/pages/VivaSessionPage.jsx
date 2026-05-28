@@ -4,7 +4,7 @@ import ChatInterface from '../components/MainScreenComp/ChatScreenComp/ChatInter
 import VivaSessionWelcome from '../components/viva-session/VivaSessionWelcome';
 import VivaSetupWizard from '../components/viva-session/VivaSetupWizard';
 
-export default function VivaSessionPage({ vivaSession }) {
+export default function VivaSessionPage({ vivaSession, vivaHistory }) {
   const fileName = vivaSession?.uploadedFileName || 'Untitled Document';
   const [currentStep, setCurrentStep] = useState(0);
   const [setup, setSetup] = useState({
@@ -37,6 +37,33 @@ export default function VivaSessionPage({ vivaSession }) {
 
   const handleStartRuntime = () => {
     setIsRuntimeActive(true);
+  };
+
+  const handleSessionComplete = async (sessionData) => {
+    if (!vivaHistory?.saveSession) return;
+
+    // Map runtime payload to backend persistence schema.
+    const payload = {
+      title: fileName,
+      source_file_name: fileName,
+      setup: {
+        difficulty: sessionData.settings.difficulty || 'Medium',
+        question_type: sessionData.settings.q_type || 'MCQ',
+        total_questions: Number(sessionData.settings.questions) || 10,
+        mode: sessionData.settings.mode || 'text',
+      },
+      result: {
+        score: sessionData.result.score || 0,
+        total: sessionData.result.total || Number(sessionData.settings.questions) || 10,
+      },
+      history: sessionData.history || [],
+    };
+
+    try {
+      await vivaHistory.saveSession(payload);
+    } catch (error) {
+      console.error('Failed to persist viva session history:', error);
+    }
   };
 
   return (
@@ -90,7 +117,7 @@ export default function VivaSessionPage({ vivaSession }) {
           </div>
         ) : (
           <section className="h-[calc(100dvh-180px)] min-h-[540px] animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <ChatInterface initialSetupConfig={runtimeConfig} />
+            <ChatInterface initialSetupConfig={runtimeConfig} onSessionComplete={handleSessionComplete} />
           </section>
         )}
       </main>

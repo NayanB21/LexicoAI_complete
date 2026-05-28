@@ -9,7 +9,8 @@ const getNormalizedSettings = (config = {}) => ({
   mode: config.mode || 'text',
 });
 
-export const useVivaChat = (initialSetupConfig = null) => {
+export const useVivaChat = (initialSetupConfig = null, options = {}) => {
+  const { onSessionComplete } = options;
   const hasInitialConfig = Boolean(initialSetupConfig);
   const normalizedInitialSettings = hasInitialConfig ? getNormalizedSettings(initialSetupConfig) : null;
 
@@ -46,6 +47,7 @@ export const useVivaChat = (initialSetupConfig = null) => {
 
   const messagesEndRef = useRef(null);
   const hasStartedFromSetupRef = useRef(false);
+  const hasCompletedSessionRef = useRef(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -117,7 +119,15 @@ export const useVivaChat = (initialSetupConfig = null) => {
       });
       const evalData = await res.json();
       if (evalData.score > 0) setScore((prev) => prev + evalData.score);
-      setHistory((prev) => [...prev, { q: currentQuestionData.question, a: userAnswer, e: evalData }]);
+      setHistory((prev) => [
+        ...prev,
+        {
+          q: currentQuestionData.question,
+          a: userAnswer,
+          e: evalData,
+          hidden_context: currentQuestionData.hidden_context || '',
+        },
+      ]);
       addMessage('bot', 'evaluation', evalData);
       setQuestionCount((prev) => prev + 1);
       setTimeout(() => {
@@ -135,6 +145,21 @@ export const useVivaChat = (initialSetupConfig = null) => {
     hasStartedFromSetupRef.current = true;
     fetchNextQuestion(normalizedInitialSettings);
   }, [hasInitialConfig, normalizedInitialSettings]);
+
+  useEffect(() => {
+    if (vivaState !== 'SUMMARY' || hasCompletedSessionRef.current || typeof onSessionComplete !== 'function') return;
+    hasCompletedSessionRef.current = true;
+
+    // Summary completion is emitted once so caller can persist history safely.
+    onSessionComplete({
+      settings,
+      result: {
+        score,
+        total: settings.questions,
+      },
+      history,
+    });
+  }, [vivaState, onSessionComplete, settings, score, history]);
 
   return { 
     messages, isLoading, settings, score, messagesEndRef, 
