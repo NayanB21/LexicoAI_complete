@@ -67,11 +67,30 @@ export const useVivaHistory = (token) => {
     [token],
   );
 
+  const appendReattempt = useCallback(
+    async (sessionId, payload) => {
+      if (!token) return null;
+      const res = await fetch(buildApiUrl(`/api/viva/history/${sessionId}/reattempt`), {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to save reattempt');
+      }
+      const data = await res.json();
+      await fetchHistory();
+      return data;
+    },
+    [token, fetchHistory],
+  );
+
   return {
     sessions,
     isLoading,
     fetchHistory,
     saveSession,
     getSessionDetail,
+    appendReattempt,
   };
 };

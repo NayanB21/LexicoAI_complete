@@ -27,6 +27,19 @@ class VivaSessionSetup(BaseModel):
 class VivaSessionResult(BaseModel):
     score: int
     total: int
+    attempted_questions: int = 0
+    average_score: float = 0.0
+
+
+class VivaAttemptRecord(BaseModel):
+    attempt_no: int
+    completion_status: str
+    score: int
+    total: int
+    attempted_questions: int
+    average_score: float = 0.0
+    completed_at: datetime
+    history: List[VivaHistoryItem]
 
 
 class VivaSessionCreateRequest(BaseModel):
@@ -35,6 +48,14 @@ class VivaSessionCreateRequest(BaseModel):
     setup: VivaSessionSetup
     result: VivaSessionResult
     history: List[VivaHistoryItem]
+    completion_status: str = "completed"
+    attempt_no: Optional[int] = None
+
+
+class VivaSessionReattemptRequest(BaseModel):
+    result: VivaSessionResult
+    history: List[VivaHistoryItem]
+    completion_status: str = "completed"
 
 
 class VivaSessionListItem(BaseModel):
@@ -44,9 +65,14 @@ class VivaSessionListItem(BaseModel):
     completed_at: datetime
     score: int
     total: int
+    attempted_questions: int = 0
     difficulty: str
     question_type: str
     total_questions: int
+    completion_status: str = "completed"
+    attempt_no: int = 1
+    source_file_name: Optional[str] = None
+    reattempt_count: int = 0
 
 
 class VivaSessionDetail(BaseModel):
@@ -58,3 +84,7 @@ class VivaSessionDetail(BaseModel):
     setup: VivaSessionSetup
     result: VivaSessionResult
     history: List[VivaHistoryItem]
+    completion_status: str = "completed"
+    attempt_no: int = 1
+    reattempt_count: int = 0
+    attempts: List[VivaAttemptRecord] = []

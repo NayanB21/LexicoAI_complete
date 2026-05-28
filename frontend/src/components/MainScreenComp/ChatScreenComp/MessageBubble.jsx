@@ -1,11 +1,30 @@
 import React from 'react';
 import { User, CheckCircle, XCircle, FileText, ChevronRight, Sparkles, Zap, Wand2 } from 'lucide-react';
 
-export default function MessageBubble({ msg, idx, settings, handlers }) {
-  const { handleOptionSelect, handleAnswerSubmit, fetchNextQuestion, setSetupStep, setVivaState, addMessage } = handlers;
+export default function MessageBubble({ msg, idx, settings, handlers, immersive = false }) {
+  const {
+    handleOptionSelect,
+    handleAnswerSubmit,
+    fetchNextQuestion,
+    setSetupStep,
+    setVivaState,
+    addMessage,
+    vivaState,
+    completedCount = 0,
+    plannedCount = 0,
+  } = handlers;
+
+  const isVivaFinished = vivaState === 'SUMMARY';
+  const hasReachedQuestionLimit = completedCount >= plannedCount && plannedCount > 0;
+  const isPrimaryContent = ['question', 'evaluation', 'summary'].includes(msg.type);
+  const useWideLayout = immersive && isPrimaryContent;
 
   return (
-    <div className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-5 fade-in duration-700 ease-out`}>
+    <div
+      className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} ${
+        useWideLayout ? 'w-full' : ''
+      } animate-in slide-in-from-bottom-5 fade-in duration-700 ease-out`}
+    >
       
       {/* Bot Avatar */}
       {msg.sender === 'bot' && (
@@ -18,11 +37,17 @@ export default function MessageBubble({ msg, idx, settings, handlers }) {
       )}
 
       {/* Message Content Container */}
-      <div className={`max-w-[92%] sm:max-w-[88%] md:max-w-[75%] rounded-2xl md:rounded-3xl p-3 sm:p-4 md:p-6 relative overflow-hidden ${
-        msg.sender === 'user' 
-          ? 'bg-gradient-to-br from-indigo-600 to-violet-700 text-white rounded-br-sm shadow-[0_10px_30px_rgba(99,102,241,0.4)] border border-white/20' 
-          : 'bg-white/5 backdrop-blur-2xl text-gray-100 rounded-bl-sm border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]'
-      }`}>
+      <div
+        className={`relative overflow-hidden rounded-2xl md:rounded-3xl p-3 sm:p-4 md:p-6 ${
+          useWideLayout
+            ? 'w-full max-w-none'
+            : 'max-w-[92%] sm:max-w-[88%] md:max-w-[75%]'
+        } ${
+          msg.sender === 'user'
+            ? 'bg-gradient-to-br from-indigo-600 to-violet-700 text-white rounded-br-sm shadow-[0_10px_30px_rgba(99,102,241,0.4)] border border-white/20'
+            : 'bg-white/5 backdrop-blur-2xl text-gray-100 rounded-bl-sm border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]'
+        } ${msg.type === 'question' && immersive ? 'border-indigo-500/20 bg-gradient-to-br from-white/[0.07] to-white/[0.02] p-4 sm:p-6 md:p-8' : ''}`}
+      >
         
         {/* Type 1: Text */}
         {msg.type === 'text' && <p className="leading-relaxed text-sm sm:text-base md:text-lg font-light tracking-wide drop-shadow-sm break-words">{msg.content}</p>}
@@ -41,8 +66,16 @@ export default function MessageBubble({ msg, idx, settings, handlers }) {
 
         {/* Type 3: Question */}
         {msg.type === 'question' && (
-          <div className="space-y-4 sm:space-y-5 md:space-y-6">
-            <p className="font-bold text-lg sm:text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white leading-relaxed drop-shadow-lg break-words">{msg.content.question}</p>
+          <div className="space-y-5 sm:space-y-6 md:space-y-8">
+            <p
+              className={`font-bold leading-snug text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white drop-shadow-lg break-words ${
+                immersive
+                  ? 'text-xl sm:text-2xl md:text-3xl lg:text-[1.75rem] lg:leading-tight'
+                  : 'text-lg sm:text-xl md:text-2xl'
+              }`}
+            >
+              {msg.content.question}
+            </p>
             {(() => {
               if (settings.q_type === 'True/False') {
                 return (
@@ -54,11 +87,11 @@ export default function MessageBubble({ msg, idx, settings, handlers }) {
               }
               if (msg.content.options && msg.content.options.length > 0) {
                 return (
-                  <div className="space-y-3 sm:space-y-4 mt-4 sm:mt-5 md:mt-6">
+                  <div className={`space-y-3 sm:space-y-4 mt-4 sm:mt-5 md:mt-6 ${immersive ? 'sm:space-y-3.5' : ''}`}>
                     {msg.content.options.map((opt, i) => (
-                      <button key={i} onClick={() => handleAnswerSubmit(opt)} className="w-full text-left p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl bg-black/40 hover:bg-gradient-to-r hover:from-blue-900/50 hover:to-indigo-900/50 border border-white/10 hover:border-blue-500/50 transition-all duration-300 flex items-center gap-2 sm:gap-3 md:gap-4 group hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:-translate-y-1">
-                        <span className="flex items-center justify-center min-w-[28px] h-7 sm:min-w-[32px] sm:h-8 rounded-lg bg-white/10 text-xs sm:text-sm font-black group-hover:bg-blue-500 group-hover:text-white transition-colors border border-white/20">{String.fromCharCode(65 + i)}</span>
-                        <span className="flex-1 text-sm sm:text-base md:text-lg font-medium text-gray-200 group-hover:text-white transition-colors break-words">{opt}</span>
+                      <button key={i} onClick={() => handleAnswerSubmit(opt)} className={`w-full text-left rounded-xl md:rounded-2xl bg-black/40 hover:bg-gradient-to-r hover:from-blue-900/50 hover:to-indigo-900/50 border border-white/10 hover:border-blue-500/50 transition-all duration-300 flex items-center gap-2 sm:gap-3 md:gap-4 group hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:-translate-y-0.5 ${immersive ? 'p-4 sm:p-5 md:p-6' : 'p-3 sm:p-4 md:p-5'}`}>
+                        <span className="flex items-center justify-center min-w-[28px] h-7 sm:min-w-[36px] sm:h-9 rounded-lg bg-white/10 text-xs sm:text-sm font-black group-hover:bg-blue-500 group-hover:text-white transition-colors border border-white/20">{String.fromCharCode(65 + i)}</span>
+                        <span className={`flex-1 font-medium text-gray-200 group-hover:text-white transition-colors break-words ${immersive ? 'text-base sm:text-lg md:text-xl' : 'text-sm sm:text-base md:text-lg'}`}>{opt}</span>
                       </button>
                     ))}
                   </div>
@@ -79,7 +112,12 @@ export default function MessageBubble({ msg, idx, settings, handlers }) {
           <div className={`p-4 sm:p-5 md:p-6 rounded-2xl md:rounded-3xl border-t-4 backdrop-blur-2xl relative overflow-hidden ${msg.content.score > 0 ? 'bg-gradient-to-b from-emerald-950/40 to-black/40 border-t-emerald-500 shadow-[0_20px_50px_rgba(16,185,129,0.15)]' : 'bg-gradient-to-b from-rose-950/40 to-black/40 border-t-rose-500 shadow-[0_20px_50px_rgba(244,63,94,0.15)]'}`}>
             <div className="flex items-center gap-2 sm:gap-3 mb-3 md:mb-4 font-black text-lg sm:text-xl md:text-2xl">
               {msg.content.score > 0 ? <CheckCircle className="text-emerald-400" size={28}/> : <XCircle className="text-rose-400" size={28}/>}
-              <span className={msg.content.score > 0 ? 'text-emerald-400' : 'text-rose-400'}>{msg.content.score > 0 ? 'Excellent Answer!' : 'Needs Improvement'}</span>
+              <span className={msg.content.score > 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                {msg.content.score > 0 ? 'Excellent Answer!' : 'Needs Improvement'}
+              </span>
+              <span className="ml-auto rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold text-white">
+                +{msg.content.score} this question
+              </span>
             </div>
             <p className="text-gray-200 text-sm sm:text-base md:text-lg mb-4 md:mb-6 leading-relaxed font-medium break-words">{msg.content.feedback}</p>
             <div className="bg-black/60 p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl border border-indigo-500/30">
@@ -89,22 +127,36 @@ export default function MessageBubble({ msg, idx, settings, handlers }) {
           </div>
         )}
 
-        {/* Type 5: Action */}
-        {msg.type === 'action' && (
+        {/* Type 5: Action — hidden when viva is done or all questions answered */}
+        {msg.type === 'action' && !isVivaFinished && !hasReachedQuestionLimit && (
            <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 mt-4 sm:mt-5 md:mt-6">
              <button onClick={() => fetchNextQuestion(settings)} className="relative px-4 sm:px-6 md:px-8 py-2.5 md:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl md:rounded-2xl font-bold text-white hover:scale-105 transition-all shadow-[0_0_30px_rgba(59,130,246,0.5)] flex items-center gap-2 text-sm md:text-base">Next Question <Wand2 size={16} className="md:w-[18px] md:h-[18px]"/></button>
-             <button onClick={() => { setSetupStep(0); setVivaState('SETUP'); addMessage('bot', 'options', ['MCQ', 'Short Answer', 'True/False', 'Fill in the blanks']); }} className="px-4 sm:px-5 md:px-6 py-2.5 md:py-3 bg-black/40 hover:bg-white/10 border border-white/20 rounded-xl md:rounded-2xl font-bold transition-all text-gray-300 text-sm md:text-base">Adjust Settings</button>
            </div>
         )}
 
         {/* Type 6: Summary */}
         {msg.type === 'summary' && (
           <div className="text-center p-5 sm:p-8 md:p-10 space-y-5 md:space-y-8 rounded-2xl bg-gradient-to-b from-indigo-900/40 to-black/60 border border-indigo-500/30">
-            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 drop-shadow-xl animate-pulse">Viva Concluded!</h2>
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 drop-shadow-xl">
+              {msg.content.stoppedEarly ? 'Viva Ended Early' : 'Viva Concluded!'}
+            </h2>
+            <p className="text-sm text-gray-400">
+              {msg.content.attempted ?? 0} of {msg.content.total} questions attempted
+              {typeof msg.content.average === 'number' ? ` · Avg ${msg.content.average.toFixed(2)}` : ''}
+            </p>
             <div className="flex items-center justify-center gap-3">
               <span className="text-5xl sm:text-7xl md:text-9xl font-black text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.4)]">{msg.content.score}</span>
-              <span className="text-2xl sm:text-3xl md:text-4xl text-gray-500 font-black mt-4 sm:mt-8 md:mt-10">/ {msg.content.total}</span>
+              <span className="text-2xl sm:text-3xl md:text-4xl text-gray-500 font-black mt-4 sm:mt-8 md:mt-10">/ {msg.content.attempted ?? msg.content.total}</span>
             </div>
+            {handlers.onReattempt ? (
+              <button
+                type="button"
+                onClick={handlers.onReattempt}
+                className="mt-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white hover:from-indigo-500 hover:to-purple-500"
+              >
+                Reattempt Viva
+              </button>
+            ) : null}
           </div>
         )}
       </div>

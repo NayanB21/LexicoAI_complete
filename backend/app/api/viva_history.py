@@ -9,8 +9,10 @@ from app.models.viva_history import (
     VivaSessionCreateRequest,
     VivaSessionDetail,
     VivaSessionListItem,
+    VivaSessionReattemptRequest,
 )
 from app.services.viva_history_service import (
+    append_reattempt,
     create_viva_session,
     get_viva_session_by_id,
     list_viva_sessions,
@@ -53,6 +55,24 @@ async def get_viva_sessions(
     db = get_db()
     user_id = _decode_user_id(token)
     return await list_viva_sessions(db, user_id, limit=limit, skip=skip)
+
+
+@router.post("/{session_id}/reattempt", status_code=200)
+async def save_reattempt(
+    session_id: str,
+    payload: VivaSessionReattemptRequest,
+    token: str = Depends(oauth2_scheme),
+):
+    db = get_db()
+    user_id = _decode_user_id(token)
+
+    if not ObjectId.is_valid(session_id):
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    updated = await append_reattempt(db, user_id, session_id, payload.model_dump())
+    if not updated:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"success": True, "session_id": session_id}
 
 
 @router.get("/{session_id}", response_model=VivaSessionDetail)

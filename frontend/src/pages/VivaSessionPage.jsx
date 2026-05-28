@@ -4,6 +4,25 @@ import ChatInterface from '../components/MainScreenComp/ChatScreenComp/ChatInter
 import VivaSessionWelcome from '../components/viva-session/VivaSessionWelcome';
 import VivaSetupWizard from '../components/viva-session/VivaSetupWizard';
 
+const buildHistoryPayload = (sessionData, fileName) => ({
+  title: fileName,
+  source_file_name: fileName,
+  setup: {
+    difficulty: sessionData.settings.difficulty || 'Medium',
+    question_type: sessionData.settings.q_type || 'MCQ',
+    total_questions: Number(sessionData.settings.questions) || 10,
+    mode: sessionData.settings.mode || 'text',
+  },
+  result: {
+    score: sessionData.result.score || 0,
+    total: sessionData.result.total || Number(sessionData.settings.questions) || 10,
+    attempted_questions: sessionData.result.attempted_questions || 0,
+    average_score: sessionData.result.average_score || 0,
+  },
+  history: sessionData.history || [],
+  completion_status: sessionData.completion_status || 'completed',
+});
+
 export default function VivaSessionPage({ vivaSession, vivaHistory }) {
   const fileName = vivaSession?.uploadedFileName || 'Untitled Document';
   const [currentStep, setCurrentStep] = useState(0);
@@ -14,6 +33,7 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
     questionType: '',
   });
   const [isRuntimeActive, setIsRuntimeActive] = useState(false);
+  const [runtimeKey, setRuntimeKey] = useState(0);
 
   const handleChange = (field, value) => {
     setSetup((prev) => ({ ...prev, [field]: value }));
@@ -39,31 +59,25 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
     setIsRuntimeActive(true);
   };
 
+  // Each completed run creates a new history entry linked by source_file_name.
   const handleSessionComplete = async (sessionData) => {
     if (!vivaHistory?.saveSession) return;
 
-    // Map runtime payload to backend persistence schema.
-    const payload = {
-      title: fileName,
-      source_file_name: fileName,
-      setup: {
-        difficulty: sessionData.settings.difficulty || 'Medium',
-        question_type: sessionData.settings.q_type || 'MCQ',
-        total_questions: Number(sessionData.settings.questions) || 10,
-        mode: sessionData.settings.mode || 'text',
-      },
-      result: {
-        score: sessionData.result.score || 0,
-        total: sessionData.result.total || Number(sessionData.settings.questions) || 10,
-      },
-      history: sessionData.history || [],
-    };
+    const payload = buildHistoryPayload(sessionData, fileName);
 
     try {
       await vivaHistory.saveSession(payload);
     } catch (error) {
       console.error('Failed to persist viva session history:', error);
     }
+  };
+
+  const handleReattempt = () => {
+    if (!vivaSession?.isDocumentProcessed && !vivaSession?.isUploadReady) {
+      alert('Document context is not available. Please upload the PDF again.');
+      return;
+    }
+    setRuntimeKey((prev) => prev + 1);
   };
 
   return (
@@ -73,23 +87,24 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
         <div className="absolute bottom-[-10%] right-[-10%] h-[420px] w-[420px] rounded-full bg-fuchsia-600/15 blur-[120px]" />
       </div>
 
-      <main className="relative mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
-        <header className="mb-8 rounded-2xl border border-white/10 bg-black/30 px-4 py-4 md:px-6 md:py-5 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.4)]">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-[0.2em] text-indigo-300/90">Viva Session</p>
-              <h1 className="mt-1 truncate text-xl font-semibold text-white md:text-2xl">
-                {fileName}
-              </h1>
-            </div>
-
-            <Link
-              to="/"
-              className="inline-flex w-fit items-center rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10"
-            >
-              Back to Dashboard
-            </Link>
+      <main
+        className={`relative mx-auto w-full px-3 py-3 sm:px-4 sm:py-4 md:px-5 ${
+          isRuntimeActive ? 'max-w-7xl' : 'max-w-5xl md:py-6'
+        }`}
+      >
+        <header className="mb-3 flex items-center justify-between gap-3 border-b border-white/10 pb-3 sm:mb-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-semibold text-white sm:text-lg">{fileName}</h1>
+            <p className="text-[11px] text-gray-500 sm:text-xs">
+              {isRuntimeActive ? 'Live viva session' : 'Setup your viva'}
+            </p>
           </div>
+          <Link
+            to="/"
+            className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-gray-200 transition-colors hover:bg-white/10 sm:text-sm sm:px-4 sm:py-2"
+          >
+            Exit
+          </Link>
         </header>
 
         {!isRuntimeActive ? (
@@ -108,16 +123,30 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
             <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
               <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Current Setup Selections</p>
               <div className="mt-3 grid gap-2 text-sm text-gray-200 md:grid-cols-2">
-                <p>Questions: <span className="text-indigo-300">{setup.questions ?? '-'}</span></p>
-                <p>Mode: <span className="text-indigo-300">{setup.mode || '-'}</span></p>
-                <p>Difficulty: <span className="text-indigo-300">{setup.difficulty || '-'}</span></p>
-                <p>Question Type: <span className="text-indigo-300">{setup.questionType || '-'}</span></p>
+                <p>
+                  Questions: <span className="text-indigo-300">{setup.questions ?? '-'}</span>
+                </p>
+                <p>
+                  Mode: <span className="text-indigo-300">{setup.mode || '-'}</span>
+                </p>
+                <p>
+                  Difficulty: <span className="text-indigo-300">{setup.difficulty || '-'}</span>
+                </p>
+                <p>
+                  Question Type: <span className="text-indigo-300">{setup.questionType || '-'}</span>
+                </p>
               </div>
             </section>
           </div>
         ) : (
-          <section className="h-[calc(100dvh-180px)] min-h-[540px] animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <ChatInterface initialSetupConfig={runtimeConfig} onSessionComplete={handleSessionComplete} />
+          <section className="flex h-[min(780px,calc(100dvh-7rem))] min-h-[min(480px,70dvh)] flex-col animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <ChatInterface
+              key={runtimeKey}
+              runtimeKey={runtimeKey}
+              initialSetupConfig={runtimeConfig}
+              onSessionComplete={handleSessionComplete}
+              onReattempt={handleReattempt}
+            />
           </section>
         )}
       </main>

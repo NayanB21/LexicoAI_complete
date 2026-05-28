@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query
 from pydantic import BaseModel
 import json
 
@@ -24,12 +24,35 @@ class EvaluateRequest(BaseModel):
     user_answer: str
     hidden_context: str
 
+@router.get("/document-status")
+async def document_status():
+    """Returns whether a PDF is already processed in the current server session."""
+    return {
+        "ready": len(pre_fetched_chunks) > 0,
+        "chunk_count": len(pre_fetched_chunks),
+    }
+
+
 # ==========================================
 # API 1: Upload, Analyze Syllabus & Pre-Fetch Chunks
 # ==========================================
 @router.post("/upload")
-async def upload_pdf(file: UploadFile = File(...), total_questions: int = Form(...)):
+async def upload_pdf(
+    file: UploadFile = File(...),
+    total_questions: int = Form(...),
+    reuse_if_ready: bool = Query(default=False),
+):
     global active_vector_store, pre_fetched_chunks
+
+    # Skip expensive PDF parsing when the same in-memory document is already prepared.
+    if reuse_if_ready and pre_fetched_chunks:
+        return {
+            "success": True,
+            "message": "Reusing existing processed document.",
+            "total_questions_set": total_questions,
+            "reused": True,
+        }
+
     try:
         contents = await file.read()
         pdf_text = await pdf_text_extractor(contents)

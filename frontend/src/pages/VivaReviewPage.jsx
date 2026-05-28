@@ -47,10 +47,38 @@ export default function VivaReviewPage({ vivaHistory }) {
       <header className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
         <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Viva Review</p>
         <h1 className="mt-2 text-xl font-semibold text-white md:text-2xl">{session.title}</h1>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <span className="rounded-md bg-indigo-500/15 px-2 py-0.5 text-xs text-indigo-300">
+            Attempt {session.attempt_no ?? 1}
+          </span>
+          {session.completion_status === 'stopped_early' ? (
+            <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-xs text-amber-300">Stopped early</span>
+          ) : (
+            <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-300">Completed</span>
+          )}
+        </div>
+        {session.source_file_name ? (
+          <p className="mt-1 text-xs text-gray-500">Document: {session.source_file_name}</p>
+        ) : null}
         <p className="mt-2 text-sm text-gray-300">
-          Score: {session.result.score}/{session.result.total} · {session.setup.difficulty} · {session.setup.question_type}
+          Score: {session.result.score}/{session.result.attempted_questions ?? session.result.total} · Avg{' '}
+          {(session.result.average_score ?? 0).toFixed(2)} · {session.setup.difficulty} · {session.setup.question_type}
         </p>
       </header>
+
+      {session.attempts?.length > 1 ? (
+        <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+          <p className="text-xs uppercase tracking-wide text-gray-500">All attempts</p>
+          <div className="mt-2 space-y-2">
+            {session.attempts.map((attempt) => (
+              <div key={attempt.attempt_no} className="rounded-lg bg-black/30 px-3 py-2 text-sm text-gray-300">
+                Attempt {attempt.attempt_no}: {attempt.score}/{attempt.attempted_questions} ·{' '}
+                {attempt.completion_status === 'stopped_early' ? 'Stopped early' : 'Completed'}
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-4 space-y-3">
         {session.history.map((item, index) => (
