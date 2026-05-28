@@ -6,6 +6,8 @@ from app.services.pdf_text_extractor import pdf_text_extractor
 from app.services.chunking_service import chunk_markdown_text
 from app.services.vector_db import create_vector_store
 from app.services.ai_examiner import client, MODEL_NAME
+from app.models.viva_learning import DoubtRequest, DoubtResponse, ExplainRequest, ExplainResponse
+from app.services.viva_learning_service import answer_doubt, generate_deep_explanation
 
 router = APIRouter()
 
@@ -258,3 +260,45 @@ async def evaluate_answer(req: EvaluateRequest):
     )
     
     return json.loads(response.choices[0].message.content)
+
+
+# ==========================================
+# API 4 & 5: Post-evaluation learning assist
+# ==========================================
+@router.post("/learning/doubt", response_model=DoubtResponse)
+async def learning_ask_doubt(req: DoubtRequest):
+    doubt = (req.doubt_message or "").strip()
+    if not doubt:
+        raise HTTPException(status_code=400, detail="Doubt message cannot be empty.")
+
+    try:
+        prior = [{"user": t.user, "assistant": t.assistant} for t in req.prior_doubts]
+        answer = await answer_doubt(
+            question=req.question,
+            user_answer=req.user_answer,
+            evaluation_feedback=req.evaluation_feedback,
+            evaluation_score=req.evaluation_score,
+            exact_reference=req.exact_reference or "",
+            hidden_context=req.hidden_context,
+            doubt_message=doubt,
+            prior_doubts=prior,
+        )
+        return DoubtResponse(answer=answer)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Failed to answer doubt.") from exc
+
+
+@router.post("/learning/explain", response_model=ExplainResponse)
+async def learning_deep_explanation(req: ExplainRequest):
+    try:
+        result = await generate_deep_explanation(
+            question=req.question,
+            user_answer=req.user_answer,
+            evaluation_feedback=req.evaluation_feedback,
+            evaluation_score=req.evaluation_score,
+            exact_reference=req.exact_reference or "",
+            hidden_context=req.hidden_context,
+        )
+        return ExplainResponse(**result)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Failed to generate explanation.") from exc

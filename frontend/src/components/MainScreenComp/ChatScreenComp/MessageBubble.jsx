@@ -1,5 +1,6 @@
 import React from 'react';
-import { User, CheckCircle, XCircle, FileText, ChevronRight, Sparkles, Zap, Wand2 } from 'lucide-react';
+import { User, CheckCircle, XCircle, FileText, ChevronRight, Sparkles, Zap } from 'lucide-react';
+import EvaluationLearningPanel from '../../viva-learning/EvaluationLearningPanel';
 
 export default function MessageBubble({ msg, idx, settings, handlers, immersive = false }) {
   const {
@@ -12,6 +13,11 @@ export default function MessageBubble({ msg, idx, settings, handlers, immersive 
     vivaState,
     completedCount = 0,
     plannedCount = 0,
+    questionHistory = [],
+    submitDoubt,
+    requestDeepExplanation,
+    learningLoading = null,
+    readOnly = false,
   } = handlers;
 
   const isVivaFinished = vivaState === 'SUMMARY';
@@ -109,29 +115,68 @@ export default function MessageBubble({ msg, idx, settings, handlers, immersive 
 
         {/* Type 4: Evaluation */}
         {msg.type === 'evaluation' && (
-          <div className={`p-4 sm:p-5 md:p-6 rounded-2xl md:rounded-3xl border-t-4 backdrop-blur-2xl relative overflow-hidden ${msg.content.score > 0 ? 'bg-gradient-to-b from-emerald-950/40 to-black/40 border-t-emerald-500 shadow-[0_20px_50px_rgba(16,185,129,0.15)]' : 'bg-gradient-to-b from-rose-950/40 to-black/40 border-t-rose-500 shadow-[0_20px_50px_rgba(244,63,94,0.15)]'}`}>
-            <div className="flex items-center gap-2 sm:gap-3 mb-3 md:mb-4 font-black text-lg sm:text-xl md:text-2xl">
-              {msg.content.score > 0 ? <CheckCircle className="text-emerald-400" size={28}/> : <XCircle className="text-rose-400" size={28}/>}
-              <span className={msg.content.score > 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                {msg.content.score > 0 ? 'Excellent Answer!' : 'Needs Improvement'}
-              </span>
-              <span className="ml-auto rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold text-white">
-                +{msg.content.score} this question
-              </span>
+          <div>
+            <div
+              className={`p-4 sm:p-5 md:p-6 rounded-2xl md:rounded-3xl border-t-4 backdrop-blur-2xl relative overflow-hidden ${
+                msg.content.score > 0
+                  ? 'bg-gradient-to-b from-emerald-950/40 to-black/40 border-t-emerald-500 shadow-[0_20px_50px_rgba(16,185,129,0.15)]'
+                  : 'bg-gradient-to-b from-rose-950/40 to-black/40 border-t-rose-500 shadow-[0_20px_50px_rgba(244,63,94,0.15)]'
+              }`}
+            >
+              <div className="flex items-center gap-2 sm:gap-3 mb-3 md:mb-4 font-black text-lg sm:text-xl md:text-2xl">
+                {msg.content.score > 0 ? (
+                  <CheckCircle className="text-emerald-400" size={28} />
+                ) : (
+                  <XCircle className="text-rose-400" size={28} />
+                )}
+                <span className={msg.content.score > 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                  {msg.content.score > 0 ? 'Excellent Answer!' : 'Needs Improvement'}
+                </span>
+                <span className="ml-auto rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold text-white">
+                  +{msg.content.score} this question
+                </span>
+              </div>
+              <p className="text-gray-200 text-sm sm:text-base md:text-lg mb-4 md:mb-6 leading-relaxed font-medium break-words">
+                {msg.content.feedback}
+              </p>
+              <div className="bg-black/60 p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl border border-indigo-500/30">
+                <p className="text-xs md:text-sm text-indigo-400 uppercase tracking-[0.2em] mb-3 font-bold flex items-center gap-2">
+                  <FileText size={16} /> Extracted Context
+                </p>
+                <p className="text-gray-300 text-sm md:text-base font-serif italic border-l-2 border-indigo-500/50 pl-3 md:pl-4 break-words">
+                  "{msg.content.exact_reference}"
+                </p>
+              </div>
             </div>
-            <p className="text-gray-200 text-sm sm:text-base md:text-lg mb-4 md:mb-6 leading-relaxed font-medium break-words">{msg.content.feedback}</p>
-            <div className="bg-black/60 p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl border border-indigo-500/30">
-              <p className="text-xs md:text-sm text-indigo-400 uppercase tracking-[0.2em] mb-3 font-bold flex items-center gap-2"><FileText size={16}/> Extracted Context</p>
-              <p className="text-gray-300 text-sm md:text-base font-serif italic border-l-2 border-indigo-500/50 pl-3 md:pl-4 break-words">"{msg.content.exact_reference}"</p>
-            </div>
+            {typeof msg.content.historyIndex === 'number' ? (
+              <EvaluationLearningPanel
+                historyIndex={msg.content.historyIndex}
+                learning={questionHistory[msg.content.historyIndex]?.learning}
+                showNext={!readOnly && !isVivaFinished && !hasReachedQuestionLimit}
+                readOnly={readOnly}
+                loadingMode={
+                  learningLoading?.index === msg.content.historyIndex ? learningLoading.mode : null
+                }
+                onSubmitDoubt={submitDoubt}
+                onRequestExplanation={requestDeepExplanation}
+                onNextQuestion={fetchNextQuestion}
+                settings={settings}
+              />
+            ) : null}
           </div>
         )}
 
-        {/* Type 5: Action — hidden when viva is done or all questions answered */}
+        {/* Legacy action messages */}
         {msg.type === 'action' && !isVivaFinished && !hasReachedQuestionLimit && (
-           <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 mt-4 sm:mt-5 md:mt-6">
-             <button onClick={() => fetchNextQuestion(settings)} className="relative px-4 sm:px-6 md:px-8 py-2.5 md:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl md:rounded-2xl font-bold text-white hover:scale-105 transition-all shadow-[0_0_30px_rgba(59,130,246,0.5)] flex items-center gap-2 text-sm md:text-base">Next Question <Wand2 size={16} className="md:w-[18px] md:h-[18px]"/></button>
-           </div>
+          <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 mt-4 sm:mt-5 md:mt-6">
+            <button
+              type="button"
+              onClick={() => fetchNextQuestion(settings)}
+              className="relative px-4 sm:px-6 md:px-8 py-2.5 md:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl md:rounded-2xl font-bold text-white hover:scale-105 transition-all shadow-[0_0_30px_rgba(59,130,246,0.5)] flex items-center gap-2 text-sm md:text-base"
+            >
+              Next Question
+            </button>
+          </div>
         )}
 
         {/* Type 6: Summary */}

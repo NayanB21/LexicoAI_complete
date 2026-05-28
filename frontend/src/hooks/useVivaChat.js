@@ -74,6 +74,7 @@ export const useVivaChat = (initialSetupConfig = null, options = {}) => {
   const [activeQuestionNumber, setActiveQuestionNumber] = useState(0);
   const [history, setHistory] = useState([]);
   const [lastQuestionScore, setLastQuestionScore] = useState(null);
+  const [learningLoading, setLearningLoading] = useState(null);
 
   const messagesEndRef = useRef(null);
   const hasStartedFromSetupRef = useRef(false);
@@ -120,6 +121,104 @@ export const useVivaChat = (initialSetupConfig = null, options = {}) => {
   const addMessage = (sender, type, content) => {
     setMessages((prev) => [...prev, { sender, type, content }]);
   };
+
+  const updateHistoryLearning = useCallback((index, updater) => {
+    setHistory((prev) => {
+      if (!prev[index]) return prev;
+      const next = [...prev];
+      const entry = { ...next[index] };
+      const current = entry.learning || {
+        doubts: [],
+        deep_explanation: null,
+        explanation_title: null,
+      };
+      entry.learning = updater({
+        ...current,
+        doubts: [...(current.doubts || [])],
+      });
+      next[index] = entry;
+      historyRef.current = next;
+      return next;
+    });
+  }, []);
+
+  const submitDoubt = useCallback(
+    async (historyIndex, doubtText) => {
+      const entry = historyRef.current[historyIndex];
+      if (!entry || !doubtText?.trim()) return;
+
+      setLearningLoading({ index: historyIndex, mode: 'doubt' });
+      try {
+        const res = await fetch(buildApiUrl('/api/viva/learning/doubt'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: entry.q,
+            user_answer: entry.a,
+            evaluation_feedback: entry.e.feedback,
+            evaluation_score: Number(entry.e.score) || 0,
+            exact_reference: entry.e.exact_reference || '',
+            hidden_context: entry.hidden_context || '',
+            doubt_message: doubtText.trim(),
+            prior_doubts: (entry.learning?.doubts || []).map((d) => ({
+              user: d.user,
+              assistant: d.assistant,
+            })),
+          }),
+        });
+        if (!res.ok) throw new Error('Doubt request failed');
+        const data = await res.json();
+        updateHistoryLearning(historyIndex, (learning) => ({
+          ...learning,
+          doubts: [
+            ...learning.doubts,
+            { user: doubtText.trim(), assistant: data.answer },
+          ],
+        }));
+      } catch {
+        addMessage('bot', 'text', 'Could not answer your doubt. Please try again.');
+      } finally {
+        setLearningLoading(null);
+      }
+    },
+    [updateHistoryLearning],
+  );
+
+  const requestDeepExplanation = useCallback(
+    async (historyIndex) => {
+      const entry = historyRef.current[historyIndex];
+      if (!entry) return;
+      if (entry.learning?.deep_explanation) return;
+
+      setLearningLoading({ index: historyIndex, mode: 'explain' });
+      try {
+        const res = await fetch(buildApiUrl('/api/viva/learning/explain'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: entry.q,
+            user_answer: entry.a,
+            evaluation_feedback: entry.e.feedback,
+            evaluation_score: Number(entry.e.score) || 0,
+            exact_reference: entry.e.exact_reference || '',
+            hidden_context: entry.hidden_context || '',
+          }),
+        });
+        if (!res.ok) throw new Error('Explanation request failed');
+        const data = await res.json();
+        updateHistoryLearning(historyIndex, (learning) => ({
+          ...learning,
+          deep_explanation: data.explanation,
+          explanation_title: data.title,
+        }));
+      } catch {
+        addMessage('bot', 'text', 'Could not generate explanation. Please try again.');
+      } finally {
+        setLearningLoading(null);
+      }
+    },
+    [updateHistoryLearning],
+  );
 
   const emitSessionComplete = useCallback(
     (stoppedEarly = false) => {
@@ -258,21 +357,21 @@ export const useVivaChat = (initialSetupConfig = null, options = {}) => {
         return next;
       });
 
-      addMessage('bot', 'evaluation', evalData);
-
       const planned = Number(settingsRef.current.questions) || 10;
       const answeredCount = questionCountRef.current + 1;
+      const historyIndex = answeredCount - 1;
 
       setQuestionCount(answeredCount);
       questionCountRef.current = answeredCount;
 
-      // Final question: go straight to results — do not prompt for "Next Question".
+      addMessage('bot', 'evaluation', { ...evalData, historyIndex });
+
+      // Final question: go straight to results — learning assist stays on evaluation card.
       if (answeredCount >= planned) {
         setTimeout(() => showSummary(false), 600);
       } else {
         setTimeout(() => {
-          addMessage('bot', 'text', 'Ready for the next question?');
-          addMessage('bot', 'action', 'NEXT_QUESTION');
+          addMessage('bot', 'text', 'Use learning assist below or continue when ready.');
         }, 600);
       }
     } catch (error) {
@@ -317,5 +416,9 @@ export const useVivaChat = (initialSetupConfig = null, options = {}) => {
     setSetupStep,
     setVivaState,
     addMessage,
+    questionHistory: history,
+    submitDoubt,
+    requestDeepExplanation,
+    learningLoading,
   };
 };

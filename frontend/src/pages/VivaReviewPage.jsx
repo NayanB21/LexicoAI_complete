@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import VivaAnalysisSection from '../components/viva-analysis/VivaAnalysisSection';
+import EvaluationLearningPanel from '../components/viva-learning/EvaluationLearningPanel';
 
 export default function VivaReviewPage({ vivaHistory }) {
   const { sessionId } = useParams();
@@ -135,6 +136,13 @@ export default function VivaReviewPage({ vivaHistory }) {
               </p>
               <p className="mt-1 text-sm text-gray-200">{item.e?.feedback}</p>
             </div>
+
+            <EvaluationLearningPanel
+              historyIndex={index}
+              learning={item.learning}
+              showNext={false}
+              readOnly
+            />
           </article>
         ))}
       </section>

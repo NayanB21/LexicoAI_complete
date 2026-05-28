@@ -3,6 +3,8 @@ from typing import Any, List, Optional
 
 from pydantic import BaseModel
 
+from app.models.viva_learning import QuestionLearningAssist
+
 
 class VivaEvaluation(BaseModel):
     score: int
@@ -15,6 +17,7 @@ class VivaHistoryItem(BaseModel):
     a: str
     e: VivaEvaluation
     hidden_context: Optional[str] = None
+    learning: Optional[QuestionLearningAssist] = None
 
 
 class VivaSessionSetup(BaseModel):

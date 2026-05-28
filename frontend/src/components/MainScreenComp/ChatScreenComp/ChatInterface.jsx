@@ -33,6 +33,10 @@ const ChatInterface = ({
     setSetupStep,
     setVivaState,
     addMessage,
+    questionHistory,
+    submitDoubt,
+    requestDeepExplanation,
+    learningLoading,
   } = useVivaChat(initialSetupConfig, { onSessionComplete });
 
   const [showEndModal, setShowEndModal] = useState(false);
@@ -50,6 +54,11 @@ const ChatInterface = ({
     vivaState,
     completedCount: scoreStats.completedCount,
     plannedCount: settings.questions,
+    questionHistory,
+    submitDoubt,
+    requestDeepExplanation,
+    learningLoading,
+    readOnly: false,
   };
 
   const loadingLabel = isEvaluating ? 'EVALUATING' : 'ANALYZING';
