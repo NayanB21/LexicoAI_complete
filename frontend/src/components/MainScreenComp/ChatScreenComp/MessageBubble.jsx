@@ -9,29 +9,29 @@ export default function MessageBubble({ msg, idx, settings, handlers }) {
       
       {/* Bot Avatar */}
       {msg.sender === 'bot' && (
-        <div className="relative w-12 h-12 mr-4 shrink-0 mt-2">
+        <div className="relative w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 mr-2 sm:mr-3 md:mr-4 shrink-0 mt-2">
           <div className="absolute inset-0 bg-blue-500 rounded-full blur-xl opacity-60 animate-pulse"></div>
           <div className="relative w-full h-full rounded-full bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-400 flex items-center justify-center border-2 border-white/30 shadow-[0_0_20px_rgba(59,130,246,0.6)]">
-            <Sparkles size={22} className="text-white drop-shadow-md" />
+            <Sparkles size={18} className="text-white drop-shadow-md md:w-[22px] md:h-[22px]" />
           </div>
         </div>
       )}
 
       {/* Message Content Container */}
-      <div className={`max-w-[85%] md:max-w-[75%] rounded-3xl p-6 relative overflow-hidden ${
+      <div className={`max-w-[92%] sm:max-w-[88%] md:max-w-[75%] rounded-2xl md:rounded-3xl p-3 sm:p-4 md:p-6 relative overflow-hidden ${
         msg.sender === 'user' 
           ? 'bg-gradient-to-br from-indigo-600 to-violet-700 text-white rounded-br-sm shadow-[0_10px_30px_rgba(99,102,241,0.4)] border border-white/20' 
           : 'bg-white/5 backdrop-blur-2xl text-gray-100 rounded-bl-sm border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]'
       }`}>
         
         {/* Type 1: Text */}
-        {msg.type === 'text' && <p className="leading-relaxed text-[16px] md:text-lg font-light tracking-wide drop-shadow-sm">{msg.content}</p>}
+        {msg.type === 'text' && <p className="leading-relaxed text-sm sm:text-base md:text-lg font-light tracking-wide drop-shadow-sm break-words">{msg.content}</p>}
 
         {/* Type 2: Options */}
         {msg.type === 'options' && (
-          <div className="flex flex-wrap gap-4 mt-4">
+          <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 mt-3 sm:mt-4">
             {msg.content.map((opt, i) => (
-              <button key={i} onClick={() => handleOptionSelect(opt)} className="group relative px-6 py-3 bg-black/40 hover:bg-gradient-to-r hover:from-blue-600 hover:to-indigo-600 border border-white/10 hover:border-transparent rounded-2xl text-sm md:text-base font-semibold transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_0_25px_rgba(59,130,246,0.6)] overflow-hidden flex items-center gap-2">
+              <button key={i} onClick={() => handleOptionSelect(opt)} className="group relative px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 bg-black/40 hover:bg-gradient-to-r hover:from-blue-600 hover:to-indigo-600 border border-white/10 hover:border-transparent rounded-xl md:rounded-2xl text-xs sm:text-sm md:text-base font-semibold transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_0_25px_rgba(59,130,246,0.6)] overflow-hidden flex items-center gap-2">
                 <span className="relative z-10">{opt}</span>
                 <ChevronRight size={16} className="relative z-10 opacity-0 group-hover:opacity-100 transition-all duration-300 -ml-4 group-hover:ml-0" />
               </button>
@@ -41,33 +41,33 @@ export default function MessageBubble({ msg, idx, settings, handlers }) {
 
         {/* Type 3: Question */}
         {msg.type === 'question' && (
-          <div className="space-y-6">
-            <p className="font-bold text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white leading-relaxed drop-shadow-lg">{msg.content.question}</p>
+          <div className="space-y-4 sm:space-y-5 md:space-y-6">
+            <p className="font-bold text-lg sm:text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white leading-relaxed drop-shadow-lg break-words">{msg.content.question}</p>
             {(() => {
               if (settings.q_type === 'True/False') {
                 return (
-                  <div className="grid grid-cols-2 gap-5 mt-6">
-                    <button onClick={() => handleAnswerSubmit("True")} className="relative overflow-hidden group py-4 px-6 rounded-2xl bg-black/40 border border-emerald-500/30 hover:border-emerald-400 hover:bg-emerald-500/20 text-emerald-400 font-black text-lg transition-all duration-300 hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:-translate-y-1">TRUE</button>
-                    <button onClick={() => handleAnswerSubmit("False")} className="relative overflow-hidden group py-4 px-6 rounded-2xl bg-black/40 border border-rose-500/30 hover:border-rose-400 hover:bg-rose-500/20 text-rose-400 font-black text-lg transition-all duration-300 hover:shadow-[0_0_30px_rgba(244,63,94,0.3)] hover:-translate-y-1">FALSE</button>
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-5 mt-4 sm:mt-5 md:mt-6">
+                    <button onClick={() => handleAnswerSubmit("True")} className="relative overflow-hidden group py-3 sm:py-4 px-3 sm:px-4 md:px-6 rounded-xl md:rounded-2xl bg-black/40 border border-emerald-500/30 hover:border-emerald-400 hover:bg-emerald-500/20 text-emerald-400 font-black text-sm sm:text-base md:text-lg transition-all duration-300 hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:-translate-y-1">TRUE</button>
+                    <button onClick={() => handleAnswerSubmit("False")} className="relative overflow-hidden group py-3 sm:py-4 px-3 sm:px-4 md:px-6 rounded-xl md:rounded-2xl bg-black/40 border border-rose-500/30 hover:border-rose-400 hover:bg-rose-500/20 text-rose-400 font-black text-sm sm:text-base md:text-lg transition-all duration-300 hover:shadow-[0_0_30px_rgba(244,63,94,0.3)] hover:-translate-y-1">FALSE</button>
                   </div>
                 );
               }
               if (msg.content.options && msg.content.options.length > 0) {
                 return (
-                  <div className="space-y-4 mt-6">
+                  <div className="space-y-3 sm:space-y-4 mt-4 sm:mt-5 md:mt-6">
                     {msg.content.options.map((opt, i) => (
-                      <button key={i} onClick={() => handleAnswerSubmit(opt)} className="w-full text-left p-5 rounded-2xl bg-black/40 hover:bg-gradient-to-r hover:from-blue-900/50 hover:to-indigo-900/50 border border-white/10 hover:border-blue-500/50 transition-all duration-300 flex items-center gap-4 group hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:-translate-y-1">
-                        <span className="flex items-center justify-center min-w-[32px] h-8 rounded-lg bg-white/10 text-sm font-black group-hover:bg-blue-500 group-hover:text-white transition-colors border border-white/20">{String.fromCharCode(65 + i)}</span>
-                        <span className="flex-1 text-base md:text-lg font-medium text-gray-200 group-hover:text-white transition-colors">{opt}</span>
+                      <button key={i} onClick={() => handleAnswerSubmit(opt)} className="w-full text-left p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl bg-black/40 hover:bg-gradient-to-r hover:from-blue-900/50 hover:to-indigo-900/50 border border-white/10 hover:border-blue-500/50 transition-all duration-300 flex items-center gap-2 sm:gap-3 md:gap-4 group hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:-translate-y-1">
+                        <span className="flex items-center justify-center min-w-[28px] h-7 sm:min-w-[32px] sm:h-8 rounded-lg bg-white/10 text-xs sm:text-sm font-black group-hover:bg-blue-500 group-hover:text-white transition-colors border border-white/20">{String.fromCharCode(65 + i)}</span>
+                        <span className="flex-1 text-sm sm:text-base md:text-lg font-medium text-gray-200 group-hover:text-white transition-colors break-words">{opt}</span>
                       </button>
                     ))}
                   </div>
                 );
               }
               return (
-                <div className="flex flex-col gap-4 mt-6">
-                  <textarea id={`ans-${idx}`} className="w-full bg-black/50 border border-white/20 rounded-2xl p-5 text-white text-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder-gray-500 resize-none shadow-inner backdrop-blur-md" rows="4" placeholder="Type your detailed answer here..." />
-                  <button onClick={() => handleAnswerSubmit(document.getElementById(`ans-${idx}`).value)} className="self-end px-8 py-3 bg-white text-black font-black tracking-wide rounded-xl hover:bg-indigo-100 hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.4)] flex items-center gap-2">Submit <Zap size={18} /></button>
+                <div className="flex flex-col gap-3 sm:gap-4 mt-4 sm:mt-5 md:mt-6">
+                  <textarea id={`ans-${idx}`} className="w-full bg-black/50 border border-white/20 rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 text-white text-sm sm:text-base md:text-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder-gray-500 resize-none shadow-inner backdrop-blur-md" rows="4" placeholder="Type your detailed answer here..." />
+                  <button onClick={() => handleAnswerSubmit(document.getElementById(`ans-${idx}`).value)} className="self-end px-5 sm:px-6 md:px-8 py-2.5 md:py-3 bg-white text-black font-black tracking-wide rounded-xl hover:bg-indigo-100 hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.4)] flex items-center gap-2 text-sm md:text-base">Submit <Zap size={16} className="md:w-[18px] md:h-[18px]" /></button>
                 </div>
               );
             })()}
@@ -76,34 +76,34 @@ export default function MessageBubble({ msg, idx, settings, handlers }) {
 
         {/* Type 4: Evaluation */}
         {msg.type === 'evaluation' && (
-          <div className={`p-6 rounded-3xl border-t-4 backdrop-blur-2xl relative overflow-hidden ${msg.content.score > 0 ? 'bg-gradient-to-b from-emerald-950/40 to-black/40 border-t-emerald-500 shadow-[0_20px_50px_rgba(16,185,129,0.15)]' : 'bg-gradient-to-b from-rose-950/40 to-black/40 border-t-rose-500 shadow-[0_20px_50px_rgba(244,63,94,0.15)]'}`}>
-            <div className="flex items-center gap-3 mb-4 font-black text-xl md:text-2xl">
+          <div className={`p-4 sm:p-5 md:p-6 rounded-2xl md:rounded-3xl border-t-4 backdrop-blur-2xl relative overflow-hidden ${msg.content.score > 0 ? 'bg-gradient-to-b from-emerald-950/40 to-black/40 border-t-emerald-500 shadow-[0_20px_50px_rgba(16,185,129,0.15)]' : 'bg-gradient-to-b from-rose-950/40 to-black/40 border-t-rose-500 shadow-[0_20px_50px_rgba(244,63,94,0.15)]'}`}>
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 md:mb-4 font-black text-lg sm:text-xl md:text-2xl">
               {msg.content.score > 0 ? <CheckCircle className="text-emerald-400" size={28}/> : <XCircle className="text-rose-400" size={28}/>}
               <span className={msg.content.score > 0 ? 'text-emerald-400' : 'text-rose-400'}>{msg.content.score > 0 ? 'Excellent Answer!' : 'Needs Improvement'}</span>
             </div>
-            <p className="text-gray-200 text-base md:text-lg mb-6 leading-relaxed font-medium">{msg.content.feedback}</p>
-            <div className="bg-black/60 p-5 rounded-2xl border border-indigo-500/30">
+            <p className="text-gray-200 text-sm sm:text-base md:text-lg mb-4 md:mb-6 leading-relaxed font-medium break-words">{msg.content.feedback}</p>
+            <div className="bg-black/60 p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl border border-indigo-500/30">
               <p className="text-xs md:text-sm text-indigo-400 uppercase tracking-[0.2em] mb-3 font-bold flex items-center gap-2"><FileText size={16}/> Extracted Context</p>
-              <p className="text-gray-300 text-sm md:text-base font-serif italic border-l-2 border-indigo-500/50 pl-4">"{msg.content.exact_reference}"</p>
+              <p className="text-gray-300 text-sm md:text-base font-serif italic border-l-2 border-indigo-500/50 pl-3 md:pl-4 break-words">"{msg.content.exact_reference}"</p>
             </div>
           </div>
         )}
 
         {/* Type 5: Action */}
         {msg.type === 'action' && (
-           <div className="flex flex-wrap gap-4 mt-6">
-             <button onClick={() => fetchNextQuestion(settings)} className="relative px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl font-bold text-white hover:scale-105 transition-all shadow-[0_0_30px_rgba(59,130,246,0.5)] flex items-center gap-2">Next Question <Wand2 size={18}/></button>
-             <button onClick={() => { setSetupStep(0); setVivaState('SETUP'); addMessage('bot', 'options', ['MCQ', 'Short Answer', 'True/False', 'Fill in the blanks']); }} className="px-6 py-3 bg-black/40 hover:bg-white/10 border border-white/20 rounded-2xl font-bold transition-all text-gray-300">Adjust Settings</button>
+           <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 mt-4 sm:mt-5 md:mt-6">
+             <button onClick={() => fetchNextQuestion(settings)} className="relative px-4 sm:px-6 md:px-8 py-2.5 md:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl md:rounded-2xl font-bold text-white hover:scale-105 transition-all shadow-[0_0_30px_rgba(59,130,246,0.5)] flex items-center gap-2 text-sm md:text-base">Next Question <Wand2 size={16} className="md:w-[18px] md:h-[18px]"/></button>
+             <button onClick={() => { setSetupStep(0); setVivaState('SETUP'); addMessage('bot', 'options', ['MCQ', 'Short Answer', 'True/False', 'Fill in the blanks']); }} className="px-4 sm:px-5 md:px-6 py-2.5 md:py-3 bg-black/40 hover:bg-white/10 border border-white/20 rounded-xl md:rounded-2xl font-bold transition-all text-gray-300 text-sm md:text-base">Adjust Settings</button>
            </div>
         )}
 
         {/* Type 6: Summary */}
         {msg.type === 'summary' && (
-          <div className="text-center p-10 space-y-8 rounded-2xl bg-gradient-to-b from-indigo-900/40 to-black/60 border border-indigo-500/30">
-            <h2 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 drop-shadow-xl animate-pulse">Viva Concluded!</h2>
+          <div className="text-center p-5 sm:p-8 md:p-10 space-y-5 md:space-y-8 rounded-2xl bg-gradient-to-b from-indigo-900/40 to-black/60 border border-indigo-500/30">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 drop-shadow-xl animate-pulse">Viva Concluded!</h2>
             <div className="flex items-center justify-center gap-3">
-              <span className="text-8xl md:text-9xl font-black text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.4)]">{msg.content.score}</span>
-              <span className="text-4xl text-gray-500 font-black mt-10">/ {msg.content.total}</span>
+              <span className="text-5xl sm:text-7xl md:text-9xl font-black text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.4)]">{msg.content.score}</span>
+              <span className="text-2xl sm:text-3xl md:text-4xl text-gray-500 font-black mt-4 sm:mt-8 md:mt-10">/ {msg.content.total}</span>
             </div>
           </div>
         )}
@@ -111,8 +111,8 @@ export default function MessageBubble({ msg, idx, settings, handlers }) {
       
       {/* User Avatar */}
       {msg.sender === 'user' && (
-        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center ml-4 shrink-0 mt-2 border-2 border-white/20 shadow-[0_0_15px_rgba(99,102,241,0.5)]">
-          <User size={20} className="text-white drop-shadow-md" />
+        <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center ml-2 sm:ml-3 md:ml-4 shrink-0 mt-2 border-2 border-white/20 shadow-[0_0_15px_rgba(99,102,241,0.5)]">
+          <User size={16} className="text-white drop-shadow-md md:w-[20px] md:h-[20px]" />
         </div>
       )}
     </div>

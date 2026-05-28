@@ -1,17 +1,25 @@
 import React, { useRef, useState } from 'react';
 import { UploadCloud, FileText, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { buildApiUrl } from '../../config/api';
 
-export default function InputArea({ viva, ui }) {
+export default function InputArea({ viva, ui, vivaSession }) {
   const fileInputRef = useRef(null);
+  const navigate = useNavigate();
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadComplete, setIsUploadComplete] = useState(false);
+  const [showStartPrompt, setShowStartPrompt] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState('');
 
   const handleAttachmentClick = () => fileInputRef.current.click();
 
   const processFile = async (file) => {
     if (file && file.type === "application/pdf") {
       setIsUploading(true);
+      setIsUploadComplete(false);
+      setShowStartPrompt(false);
+      setUploadedFileName(file.name || '');
       
       const formData = new FormData();
       formData.append('file', file);
@@ -25,9 +33,10 @@ export default function InputArea({ viva, ui }) {
         const data = await res.json();
         
         if (data.success) {
-          // Jaise hi file process ho, Chat Interface open ho jayega
-          if (ui && ui.setIsVivaStarted) {
-            ui.setIsVivaStarted(true); 
+          setIsUploadComplete(true);
+          setShowStartPrompt(true);
+          if (vivaSession?.setSessionFromUpload) {
+            vivaSession.setSessionFromUpload(file.name || 'Untitled Document');
           }
         } else {
           alert("Backend Error: " + (data.detail || "Upload failed"));
@@ -47,6 +56,14 @@ export default function InputArea({ viva, ui }) {
   const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
   const handleDrop = (e) => { e.preventDefault(); setIsDragging(false); processFile(e.dataTransfer.files[0]); };
+
+  const handleStartViva = () => {
+    navigate('/viva/session');
+  };
+
+  const handleDeclineStart = () => {
+    setShowStartPrompt(false);
+  };
 
   return (
     <div className="p-4 w-full z-20">
@@ -98,6 +115,30 @@ export default function InputArea({ viva, ui }) {
         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
         End-to-End Encrypted. Processed strictly in-memory.
       </p>
+
+      {isUploadComplete && showStartPrompt && (
+        <div className="mt-5 rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-950/40 to-slate-900/70 p-4 md:p-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <p className="text-sm md:text-base font-semibold text-white">
+            PDF ready: <span className="text-indigo-300">{uploadedFileName || 'Untitled Document'}</span>
+          </p>
+          <p className="mt-1 text-sm text-gray-300">Should we start viva?</p>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              onClick={handleStartViva}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all"
+            >
+              Yes
+            </button>
+            <button
+              onClick={handleDeclineStart}
+              className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-gray-200 font-semibold hover:bg-white/10 transition-colors"
+            >
+              No
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
