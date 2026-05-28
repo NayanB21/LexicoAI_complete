@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import ChatInterface from '../components/MainScreenComp/ChatScreenComp/ChatInterface';
 import VivaSessionWelcome from '../components/viva-session/VivaSessionWelcome';
 import VivaSetupWizard from '../components/viva-session/VivaSetupWizard';
 
@@ -12,6 +13,7 @@ export default function VivaSessionPage({ vivaSession }) {
     difficulty: '',
     questionType: '',
   });
+  const [isRuntimeActive, setIsRuntimeActive] = useState(false);
 
   const handleChange = (field, value) => {
     setSetup((prev) => ({ ...prev, [field]: value }));
@@ -23,6 +25,18 @@ export default function VivaSessionPage({ vivaSession }) {
 
   const handleBack = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
+  };
+
+  const runtimeConfig = {
+    questions: setup.questions ?? 10,
+    difficulty: setup.difficulty || 'Medium',
+    q_type: setup.questionType || 'MCQ',
+    mode: setup.mode || 'text',
+    domain: 'General',
+  };
+
+  const handleStartRuntime = () => {
+    setIsRuntimeActive(true);
   };
 
   return (
@@ -51,27 +65,34 @@ export default function VivaSessionPage({ vivaSession }) {
           </div>
         </header>
 
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500">
-          <VivaSessionWelcome />
+        {!isRuntimeActive ? (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500">
+            <VivaSessionWelcome />
 
-          <VivaSetupWizard
-            currentStep={currentStep}
-            setup={setup}
-            onChange={handleChange}
-            onNext={handleNext}
-            onBack={handleBack}
-          />
+            <VivaSetupWizard
+              currentStep={currentStep}
+              setup={setup}
+              onChange={handleChange}
+              onNext={handleNext}
+              onBack={handleBack}
+              onComplete={handleStartRuntime}
+            />
 
-          <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
-            <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Current Selections (UI State Only)</p>
-            <div className="mt-3 grid gap-2 text-sm text-gray-200 md:grid-cols-2">
-              <p>Questions: <span className="text-indigo-300">{setup.questions ?? '-'}</span></p>
-              <p>Mode: <span className="text-indigo-300">{setup.mode || '-'}</span></p>
-              <p>Difficulty: <span className="text-indigo-300">{setup.difficulty || '-'}</span></p>
-              <p>Question Type: <span className="text-indigo-300">{setup.questionType || '-'}</span></p>
-            </div>
+            <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Current Setup Selections</p>
+              <div className="mt-3 grid gap-2 text-sm text-gray-200 md:grid-cols-2">
+                <p>Questions: <span className="text-indigo-300">{setup.questions ?? '-'}</span></p>
+                <p>Mode: <span className="text-indigo-300">{setup.mode || '-'}</span></p>
+                <p>Difficulty: <span className="text-indigo-300">{setup.difficulty || '-'}</span></p>
+                <p>Question Type: <span className="text-indigo-300">{setup.questionType || '-'}</span></p>
+              </div>
+            </section>
+          </div>
+        ) : (
+          <section className="h-[calc(100dvh-180px)] min-h-[540px] animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <ChatInterface initialSetupConfig={runtimeConfig} />
           </section>
-        </div>
+        )}
       </main>
     </div>
   );

@@ -1,26 +1,51 @@
 import { useState, useRef, useEffect } from 'react';
 import { buildApiUrl } from '../config/api';
 
-export const useVivaChat = () => {
-  const [messages, setMessages] = useState([
-    {
-      sender: 'bot',
-      type: 'text',
-      content: 'Document successfully processed! Let\'s setup your Viva. What type of questions do you want?'
-    },
-    { sender: 'bot', type: 'options', content: ['MCQ', 'Short Answer', 'True/False', 'Fill in the blanks'] }
-  ]);
+const getNormalizedSettings = (config = {}) => ({
+  questions: Number(config.questions) || 10,
+  q_type: config.q_type || '',
+  domain: config.domain || 'General',
+  difficulty: config.difficulty || '',
+  mode: config.mode || 'text',
+});
+
+export const useVivaChat = (initialSetupConfig = null) => {
+  const hasInitialConfig = Boolean(initialSetupConfig);
+  const normalizedInitialSettings = hasInitialConfig ? getNormalizedSettings(initialSetupConfig) : null;
+
+  const [messages, setMessages] = useState(() => {
+    if (hasInitialConfig) {
+      return [
+        {
+          sender: 'bot',
+          type: 'text',
+          content: 'Great setup. Your Viva session is ready. Generating your first question now...',
+        },
+      ];
+    }
+    return [
+      {
+        sender: 'bot',
+        type: 'text',
+        content: 'Document successfully processed! Let\'s setup your Viva. What type of questions do you want?',
+      },
+      { sender: 'bot', type: 'options', content: ['MCQ', 'Short Answer', 'True/False', 'Fill in the blanks'] },
+    ];
+  });
   
   const [isLoading, setIsLoading] = useState(false);
-  const [vivaState, setVivaState] = useState('SETUP'); 
-  const [setupStep, setSetupStep] = useState(0); 
-  const [settings, setSettings] = useState({ questions: 10, q_type: '', domain: '', difficulty: '' });
+  const [vivaState, setVivaState] = useState(hasInitialConfig ? 'QUESTION' : 'SETUP');
+  const [setupStep, setSetupStep] = useState(0);
+  const [settings, setSettings] = useState(
+    hasInitialConfig ? normalizedInitialSettings : { questions: 10, q_type: '', domain: '', difficulty: '', mode: 'text' },
+  );
   const [currentQuestionData, setCurrentQuestionData] = useState(null);
   const [score, setScore] = useState(0);
   const [questionCount, setQuestionCount] = useState(0);
   const [history, setHistory] = useState([]);
 
   const messagesEndRef = useRef(null);
+  const hasStartedFromSetupRef = useRef(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -104,6 +129,12 @@ export const useVivaChat = () => {
     }
     setIsLoading(false);
   };
+
+  useEffect(() => {
+    if (!hasInitialConfig || hasStartedFromSetupRef.current) return;
+    hasStartedFromSetupRef.current = true;
+    fetchNextQuestion(normalizedInitialSettings);
+  }, [hasInitialConfig, normalizedInitialSettings]);
 
   return { 
     messages, isLoading, settings, score, messagesEndRef, 

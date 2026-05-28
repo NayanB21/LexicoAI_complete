@@ -12,7 +12,7 @@ const steps = [
   { id: 'type', label: 'Type' },
 ];
 
-export default function VivaSetupWizard({ currentStep, setup, onChange, onNext, onBack }) {
+export default function VivaSetupWizard({ currentStep, setup, onChange, onNext, onBack, onComplete }) {
   const isFirst = currentStep === 0;
   const isLast = currentStep === steps.length - 1;
   const modeIsVoice = setup.mode === 'voice';
@@ -84,11 +84,11 @@ export default function VivaSetupWizard({ currentStep, setup, onChange, onNext, 
 
           <button
             type="button"
-            onClick={onNext}
+            onClick={isLast ? onComplete : onNext}
             disabled={!canProceed()}
             className="rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:from-indigo-500 hover:to-purple-500 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {isLast ? 'Finish Setup UI' : 'Continue'}
+            {isLast ? 'Start Viva Session' : 'Continue'}
           </button>
         </div>
       </div>
