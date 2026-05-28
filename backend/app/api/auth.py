@@ -1,11 +1,12 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends,Header
 from fastapi.security import OAuth2PasswordBearer
-import jwt
+from jose import jwt, JWTError
 from bson import ObjectId
-from app.models.user import UserCreate, UserLogin, UserResponse, Token
+from app.models.user import UserUpdate, UserCreate, UserLogin, UserResponse, Token
 from app.core.database import get_db
 from app.core.security import get_password_hash, verify_password, create_access_token, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from datetime import timedelta
+
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -88,3 +89,53 @@ async def read_users_me(token: str = Depends(oauth2_scheme)):
         name=user["name"],
         email=user["email"]
     )
+
+
+@router.put("/update")
+async def update_profile(update_data: UserUpdate, authorization: str = Header(...)):
+    try:
+        # Consistency ke liye db connection yahan bhi initialize karo
+        db = get_db()
+        
+        # 1. Token extract karo
+        token = authorization.split(" ")[1]
+        
+        # FIX: os.getenv ki jagah security se imported SECRET_KEY aur ALGORITHM use karo
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        
+        # FIX: Login time pe humne "sub" mein user_id (ObjectId string) save kiya tha, email nahi!
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid authentication token")
+            
+        # FIX: Database mein email ki jagah ObjectId se dhundo
+        user = await db["users"].find_one({"_id": ObjectId(user_id)})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        update_fields = {}
+
+        # 2. Agar naya naam aaya hai, toh update list mein daalo
+        if update_data.name:
+            update_fields["name"] = update_data.name
+
+        # 3. Agar password change ki request aayi hai
+        if update_data.current_password and update_data.new_password:
+            if not verify_password(update_data.current_password, user["hashed_password"]):
+                raise HTTPException(status_code=400, detail="Incorrect current password")
+            update_fields["hashed_password"] = get_password_hash(update_data.new_password)
+
+        # 4. Database mein save karo (Yahan bhi ObjectId se update hoga)
+        if update_fields:
+            await db["users"].update_one(
+                {"_id": ObjectId(user_id)}, 
+                {"$set": update_fields}
+            )
+            return {"message": "Profile updated successfully!"}
+            
+        return {"message": "No changes made."}
+
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
