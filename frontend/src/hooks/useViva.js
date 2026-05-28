@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { buildApiUrl } from '../config/api';
 
 export const useViva = (setIsConfigModalOpen, setIsVivaStarted) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -23,7 +24,7 @@ export const useViva = (setIsConfigModalOpen, setIsVivaStarted) => {
     try {
       console.log("Uploading to backend with settings...", userSettings);
       
-      const response = await fetch("http://localhost:8000/api/upload/", {
+      const response = await fetch(buildApiUrl('/api/upload/'), {
         method: "POST",
         body: formData,
       });

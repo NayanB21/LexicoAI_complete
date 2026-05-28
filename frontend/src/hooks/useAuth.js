@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { buildApiUrl } from '../config/api';
 
 export const useAuth = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -25,7 +26,7 @@ useEffect(() => {
     const fetchUserProfile = async () => {
       if (!token) return;
       try {
-        const response = await fetch("http://localhost:8000/api/auth/me", {
+        const response = await fetch(buildApiUrl('/api/auth/me'), {
           headers: { 
             "Authorization": `Bearer ${token}` 
           }
@@ -47,7 +48,7 @@ useEffect(() => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch("http://localhost:8000/api/auth/login", {
+      const response = await fetch(buildApiUrl('/api/auth/login'), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -71,7 +72,7 @@ useEffect(() => {
 
   const register = async (name, email, password, onSwitchToLogin) => {
     try {
-      const response = await fetch("http://localhost:8000/api/auth/register", {
+      const response = await fetch(buildApiUrl('/api/auth/register'), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),

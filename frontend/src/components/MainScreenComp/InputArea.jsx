@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { UploadCloud, FileText, Loader2 } from 'lucide-react';
+import { buildApiUrl } from '../../config/api';
 
 export default function InputArea({ viva, ui }) {
   const fileInputRef = useRef(null);
@@ -17,7 +18,7 @@ export default function InputArea({ viva, ui }) {
       formData.append('total_questions', 10); // Default set kiya hai
 
       try {
-        const res = await fetch('http://localhost:8000/api/viva/upload', {
+        const res = await fetch(buildApiUrl('/api/viva/upload'), {
           method: 'POST',
           body: formData,
         });

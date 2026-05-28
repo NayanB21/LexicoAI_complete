@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { buildApiUrl } from '../config/api';
 
 export const useVivaChat = () => {
   const [messages, setMessages] = useState([
@@ -59,7 +60,7 @@ export const useVivaChat = () => {
     addMessage('bot', 'text', `Generating Question ${questionCount + 1}...`);
     try {
       const payload = { ...currentSettings, current_q_no: questionCount };
-      const res = await fetch('http://localhost:8000/api/viva/generate', {
+      const res = await fetch(buildApiUrl('/api/viva/generate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -80,7 +81,7 @@ export const useVivaChat = () => {
     setVivaState('EVALUATION');
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/viva/evaluate', {
+      const res = await fetch(buildApiUrl('/api/viva/evaluate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

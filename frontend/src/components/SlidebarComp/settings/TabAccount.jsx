@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LogOut, User, Mail, Shield, Save, X, Edit2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { buildApiUrl } from '../../../config/api';
 
 const TabAccount = ({ auth }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -22,7 +23,7 @@ const TabAccount = ({ auth }) => {
       if (!token) return;
 
       try {
-        const response = await fetch('http://localhost:8000/api/auth/me', {
+        const response = await fetch(buildApiUrl('/api/auth/me'), {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -57,7 +58,7 @@ const TabAccount = ({ auth }) => {
     const token = localStorage.getItem('token');
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/update', {
+      const response = await fetch(buildApiUrl('/api/auth/update'), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
