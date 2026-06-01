@@ -6,6 +6,7 @@ import MessageBubble from './MessageBubble';
 import VivaStatsPanel, { VivaStatsMobileStrip } from '../../viva-session/VivaStatsPanel';
 import EndVivaModal from '../../viva-session/EndVivaModal';
 import VivaAnalysisSection from '../../viva-analysis/VivaAnalysisSection';
+import VivaSessionSettingsModal from '../../viva-session/VivaSessionSettingsModal';
 
 const ChatInterface = ({
   initialSetupConfig = null,
@@ -28,6 +29,7 @@ const ChatInterface = ({
     isVivaActive,
     handleOptionSelect,
     fetchNextQuestion,
+    updateSessionSettings,
     handleAnswerSubmit,
     endVivaEarly,
     setSetupStep,
@@ -41,6 +43,24 @@ const ChatInterface = ({
 
   const [showEndModal, setShowEndModal] = useState(false);
   const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+
+  const handleSaveSessionSettings = (partial) => {
+    const prevPlanned = settings.questions;
+    updateSessionSettings(partial);
+    const extended =
+      Number(partial.questions) > Number(prevPlanned) &&
+      scoreStats.completedCount >= Number(prevPlanned);
+    if (extended) {
+      addMessage(
+        'bot',
+        'text',
+        `Session extended to ${partial.questions} questions. Click Next Question when ready.`,
+      );
+    } else {
+      addMessage('bot', 'text', 'Settings updated. They will apply to your next question.');
+    }
+  };
 
   const handlers = {
     handleOptionSelect,
@@ -59,6 +79,7 @@ const ChatInterface = ({
     requestDeepExplanation,
     learningLoading,
     readOnly: false,
+    onOpenSettings: () => setSettingsModalOpen(true),
   };
 
   const loadingLabel = isEvaluating ? 'EVALUATING' : 'ANALYZING';
@@ -143,6 +164,14 @@ const ChatInterface = ({
           </div>
         </div>
       </div>
+
+      <VivaSessionSettingsModal
+        isOpen={settingsModalOpen}
+        settings={settings}
+        answeredCount={scoreStats.completedCount}
+        onClose={() => setSettingsModalOpen(false)}
+        onSave={handleSaveSessionSettings}
+      />
 
       <EndVivaModal
         isOpen={showEndModal}

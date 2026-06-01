@@ -46,7 +46,7 @@ async def upload_pdf(
     # total_questions: int = Form(...),
     reuse_if_ready: bool = Query(default=False),
 ):
-    global active_vector_store, pre_fetched_chunks
+    global active_vector_store, pre_fetched_chunks, current_pdf_name
 
     # Skip expensive PDF parsing when the same in-memory document is already prepared.
     if reuse_if_ready and pre_fetched_chunks and current_pdf_name == file.filename:
@@ -67,6 +67,14 @@ async def upload_pdf(
         chunks = chunk_markdown_text(pdf_text)
         active_vector_store = create_vector_store(chunks)
         current_pdf_name = file.filename
+
+        clean_chunks = []
+        for chunk in chunks:
+            # Sirf wo paragraph rakho jo 150 characters se bada ho!
+            if len(chunk.page_content.strip()) > 150:
+                clean_chunks.append(chunk)
+        
+        chunks = clean_chunks
 
         # ---------------------------------------------------------
         # NEW PRO ARCHITECTURE: Syllabus Mapping & Dense Fetching
@@ -98,14 +106,17 @@ async def upload_pdf(
         This paragraph must be written EXACTLY as if it were an excerpt pulled directly from a high-level textbook on this specific subject. 
         Use dense academic terminology, a formal tone, and ensure the scientific/academic context STRICTLY ALIGNS with the domain implied by the TOC.
 
-        OUTPUT STRICTLY AS A VALID JSON ARRAY OF OBJECTS ONLY. NO extra text, NO markdown.
+OUTPUT STRICTLY AS A VALID JSON OBJECT WITH A SINGLE KEY "topics" CONTAINING THE ARRAY. 
+        NO extra text, NO markdown.
         Example Format:
-        [
-            {{
-                "topic": "Newton's First Law",
-                "hypothetical_paragraph": "Newton's first law of motion, often referred to as the law of inertia, postulates that a physical body will remain at rest, or continue to move at a constant velocity in a straight line, unless acted upon by a net external force. This principle establishes the fundamental relationship between force and the state of motion..."
-            }}
-        ]
+        {{
+            "topics": [
+                {{
+                    "topic": "Non-Cooperation Movement",
+                    "hypothetical_paragraph": "The Non-Cooperation Movement was launched by Mahatma Gandhi in 1920..."
+                }}
+            ]
+        }}
         """
 
         
@@ -113,27 +124,34 @@ async def upload_pdf(
             response = client.chat.completions.create(
                 model=MODEL_NAME,
                 messages=[{"role": "user", "content": priority_prompt}],
-                temperature=0.3, # Thoda sa creative freedom diya taaki paragraph achha likhe
+                temperature=0.3, 
                 response_format={"type": "json_object"}
             )
             
             raw_response = response.choices[0].message.content.strip()
             
-            # Clean Markdown if exists (safety)
             if raw_response.startswith("```json"):
                 raw_response = raw_response.replace("```json", "", 1).replace("```", "")
             
             res_json = json.loads(raw_response)
             
-            # Handle array vs object response from LLM
-            hyde_topics = res_json if isinstance(res_json, list) else res_json.get("topics", [])
+            # 🧠 SMART PARSING: LLM ne agar 'topics' ki jagah koi aur key use ki, tab bhi array nikal lo
+            if isinstance(res_json, list):
+                hyde_topics = res_json
+            elif isinstance(res_json, dict):
+                # Try 'topics' first, otherwise grab the first list it can find in the dictionary
+                hyde_topics = res_json.get("topics") or next((v for v in res_json.values() if isinstance(v, list)), [])
             
+            # 🚨 Safety Check: Agar abhi bhi list khali hai, toh explicitly Error raise karo taaki Fallback chale!
+            if not hyde_topics:
+                raise ValueError("LLM returned an empty array or missing topics.")
+                
         except Exception as e:
             print(f"⚠️ HyDE Generation failed, falling back to simple TOC: {e}")
+            # The Fallback (Ab 0 chunks wala issue kabhi nahi aayega)
             hyde_topics = [{"topic": t, "hypothetical_paragraph": t} for t in list(toc_set)[:15]]
 
         print(f"🌟 Generated {len(hyde_topics)} HyDE Contexts successfully!")
-
         # 3. Pre-fetch using Symmetric Search (HyDE)
         pre_fetched_chunks.clear()
         

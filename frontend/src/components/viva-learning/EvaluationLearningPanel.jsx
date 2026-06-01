@@ -6,6 +6,7 @@ import {
   BookOpen,
   Loader2,
   Send,
+  Settings,
   Wand2,
 } from 'lucide-react';
 
@@ -40,6 +41,7 @@ export default function EvaluationLearningPanel({
   onSubmitDoubt,
   onRequestExplanation,
   onNextQuestion,
+  onOpenSettings,
   settings,
 }) {
   const [doubtOpen, setDoubtOpen] = useState(false);
@@ -84,7 +86,7 @@ export default function EvaluationLearningPanel({
           {showNext ? (
             <button
               type="button"
-              onClick={() => onNextQuestion?.(settings)}
+              onClick={() => onNextQuestion?.()}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-900/30 hover:scale-[1.02] transition-transform"
             >
               Next Question <Wand2 size={14} />
@@ -98,6 +100,14 @@ export default function EvaluationLearningPanel({
             <HelpCircle size={14} />
             Ask Doubt
             {doubtOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenSettings?.()}
+            className="inline-flex items-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 hover:bg-indigo-500/20"
+          >
+            <Settings size={14} />
+            Change Settings
           </button>
           <button
             type="button"

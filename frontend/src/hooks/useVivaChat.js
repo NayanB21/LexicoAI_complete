@@ -287,8 +287,18 @@ export const useVivaChat = (initialSetupConfig = null, options = {}) => {
     }
   };
 
+  const updateSessionSettings = useCallback((partial) => {
+    setSettings((prev) => {
+      const next = getNormalizedSettings({ ...prev, ...partial });
+      settingsRef.current = next;
+      return next;
+    });
+  }, []);
+
   const fetchNextQuestion = async (currentSettings) => {
-    if (questionCountRef.current >= currentSettings.questions) {
+    const activeSettings = getNormalizedSettings(currentSettings || settingsRef.current);
+
+    if (questionCountRef.current >= activeSettings.questions) {
       showSummary(false);
       return;
     }
@@ -299,7 +309,7 @@ export const useVivaChat = (initialSetupConfig = null, options = {}) => {
     addMessage('bot', 'text', `Generating Question ${nextQuestionNum}...`);
 
     try {
-      const payload = { ...currentSettings, current_q_no: questionCountRef.current };
+      const payload = { ...activeSettings, current_q_no: questionCountRef.current };
       const res = await fetch(buildApiUrl('/api/viva/generate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -366,9 +376,14 @@ export const useVivaChat = (initialSetupConfig = null, options = {}) => {
 
       addMessage('bot', 'evaluation', { ...evalData, historyIndex });
 
-      // Final question: go straight to results — learning assist stays on evaluation card.
+      // Final question: defer summary so user can extend total via Change Settings.
       if (answeredCount >= planned) {
-        setTimeout(() => showSummary(false), 600);
+        setTimeout(() => {
+          const latestPlanned = Number(settingsRef.current.questions) || 10;
+          if (questionCountRef.current >= latestPlanned) {
+            showSummary(false);
+          }
+        }, 600);
       } else {
         setTimeout(() => {
           addMessage('bot', 'text', 'Use learning assist below or continue when ready.');
@@ -411,6 +426,7 @@ export const useVivaChat = (initialSetupConfig = null, options = {}) => {
     isVivaActive,
     handleOptionSelect,
     fetchNextQuestion,
+    updateSessionSettings,
     handleAnswerSubmit,
     endVivaEarly,
     setSetupStep,

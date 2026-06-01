@@ -18,6 +18,7 @@ export default function MessageBubble({ msg, idx, settings, handlers, immersive 
     requestDeepExplanation,
     learningLoading = null,
     readOnly = false,
+    onOpenSettings,
   } = handlers;
 
   const isVivaFinished = vivaState === 'SUMMARY';
@@ -160,6 +161,7 @@ export default function MessageBubble({ msg, idx, settings, handlers, immersive 
                 onSubmitDoubt={submitDoubt}
                 onRequestExplanation={requestDeepExplanation}
                 onNextQuestion={fetchNextQuestion}
+                onOpenSettings={onOpenSettings}
                 settings={settings}
               />
             ) : null}
