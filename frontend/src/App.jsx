@@ -24,7 +24,7 @@ function App() {
   }
 
   const withSidebarLayout = (content) => (
-    <div className="flex h-screen min-h-dvh bg-gray-900 text-gray-100 font-sans overflow-hidden">
+    <div className="flex h-dvh max-h-dvh bg-gray-900 text-gray-100 font-sans overflow-hidden">
       {ui.isSidebarOpen && (
         <div
           className="absolute inset-0 bg-black/50 z-30 md:hidden"
@@ -33,7 +33,7 @@ function App() {
       )}
 
       <Sidebar ui={ui} auth={auth} vivaHistory={vivaHistory} />
-      <div className="flex-1 min-w-0">{content}</div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{content}</div>
     </div>
   );
 

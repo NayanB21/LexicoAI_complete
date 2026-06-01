@@ -34,7 +34,7 @@ export default function Sidebar({ ui ,auth, vivaHistory }) {
       </div>
 
       <SettingsModal ui={ui} auth={auth} />
-      <UserProfileModal ui={ui} auth={auth} />
+      <UserProfileModal ui={ui} auth={auth} vivaHistory={vivaHistory} />
     </>
   )
 }

@@ -77,7 +77,7 @@ export default function MessageBubble({ msg, idx, settings, handlers, immersive 
             <p
               className={`font-bold leading-snug text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white drop-shadow-lg break-words ${
                 immersive
-                  ? 'text-xl sm:text-2xl md:text-3xl lg:text-[1.75rem] lg:leading-tight'
+                  ? 'text-lg sm:text-xl md:text-2xl lg:leading-snug'
                   : 'text-lg sm:text-xl md:text-2xl'
               }`}
             >
@@ -106,7 +106,7 @@ export default function MessageBubble({ msg, idx, settings, handlers, immersive 
               }
               return (
                 <div className="flex flex-col gap-3 sm:gap-4 mt-4 sm:mt-5 md:mt-6">
-                  <textarea id={`ans-${idx}`} className="w-full bg-black/50 border border-white/20 rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 text-white text-sm sm:text-base md:text-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder-gray-500 resize-none shadow-inner backdrop-blur-md" rows="4" placeholder="Type your detailed answer here..." />
+                  <textarea id={`ans-${idx}`} className="w-full min-h-[140px] bg-black/50 border border-white/20 rounded-xl md:rounded-2xl p-4 sm:p-5 md:p-6 text-white text-sm sm:text-base md:text-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder-gray-500 resize-y shadow-inner backdrop-blur-md" rows="5" placeholder="Type your detailed answer here..." />
                   <button onClick={() => handleAnswerSubmit(document.getElementById(`ans-${idx}`).value)} className="self-end px-5 sm:px-6 md:px-8 py-2.5 md:py-3 bg-white text-black font-black tracking-wide rounded-xl hover:bg-indigo-100 hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.4)] flex items-center gap-2 text-sm md:text-base">Submit <Zap size={16} className="md:w-[18px] md:h-[18px]" /></button>
                 </div>
               );

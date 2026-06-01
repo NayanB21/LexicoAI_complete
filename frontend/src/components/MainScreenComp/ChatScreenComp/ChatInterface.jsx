@@ -114,7 +114,7 @@ const ChatInterface = ({
 
       <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 sm:px-5 sm:py-5 md:px-8 md:py-6 scrollbar-hide">
-          <div className="mx-auto w-full max-w-3xl space-y-5 sm:space-y-6 lg:max-w-4xl xl:max-w-5xl lg:space-y-7">
+          <div className="mx-auto w-full max-w-none space-y-5 sm:space-y-6 lg:space-y-7 pr-0 lg:pr-2">
             {messages.map((msg, idx) => (
               <MessageBubble
                 key={`${runtimeKey}-${idx}`}

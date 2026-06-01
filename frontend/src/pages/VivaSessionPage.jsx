@@ -95,15 +95,15 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
   };
 
   return (
-    <div className="min-h-dvh bg-[#050914] text-gray-100">
+    <div className="flex min-h-0 flex-1 flex-col bg-[#050914] text-gray-100 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-12%] h-[420px] w-[420px] rounded-full bg-indigo-600/20 blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] h-[420px] w-[420px] rounded-full bg-fuchsia-600/15 blur-[120px]" />
       </div>
 
       <main
-        className={`relative mx-auto w-full px-3 py-3 sm:px-4 sm:py-4 md:px-5 ${
-          isRuntimeActive ? 'max-w-7xl' : 'max-w-5xl md:py-6'
+        className={`relative mx-auto flex w-full min-h-0 flex-1 flex-col px-3 py-3 sm:px-4 sm:py-4 md:px-5 ${
+          isRuntimeActive ? 'max-w-[100rem]' : 'max-w-5xl md:py-6'
         }`}
       >
         <header className="mb-3 flex items-center justify-between gap-3 border-b border-white/10 pb-3 sm:mb-4">
@@ -122,7 +122,7 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
         </header>
 
         {!isRuntimeActive ? (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500">
+          <div className="min-h-0 flex-1 overflow-y-auto space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500 pb-8">
             <VivaSessionWelcome />
 
             <VivaSetupWizard
@@ -153,7 +153,7 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
             </section>
           </div>
         ) : (
-          <section className="flex h-[min(780px,calc(100dvh-7rem))] min-h-[min(480px,70dvh)] flex-col animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <section className="flex min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-bottom-2 duration-500">
             <ChatInterface
               key={runtimeKey}
               runtimeKey={runtimeKey}
