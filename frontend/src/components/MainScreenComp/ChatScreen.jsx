@@ -1,6 +1,5 @@
 import WelcomeScreen from './ChatScreenComp/WelcomeScreen'
 import ChatInterface from './ChatScreenComp/ChatInterface'
-import VivaConfigModal from './ChatScreenComp/VivaConfigModal'
 
 export default function ChatScreen({ ui, viva, vivaSession }) {
   return (
@@ -12,7 +11,6 @@ export default function ChatScreen({ ui, viva, vivaSession }) {
         <WelcomeScreen ui={ui} viva={viva} vivaSession={vivaSession} />
       )}
 
-      <VivaConfigModal ui={ui} viva={viva} />
       
     </div>
   )

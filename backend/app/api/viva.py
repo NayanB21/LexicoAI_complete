@@ -14,6 +14,8 @@ router = APIRouter()
 # Global variables for Stateful RAG
 active_vector_store = None
 pre_fetched_chunks = [] # NAYA: Yahan hum pehle se hi best chunks fetch karke rakhenge
+current_pdf_name = ""
+chunk_pointer = 0
 
 class GenerateRequest(BaseModel):
     q_type: str
@@ -41,17 +43,17 @@ async def document_status():
 @router.post("/upload")
 async def upload_pdf(
     file: UploadFile = File(...),
-    total_questions: int = Form(...),
+    # total_questions: int = Form(...),
     reuse_if_ready: bool = Query(default=False),
 ):
     global active_vector_store, pre_fetched_chunks
 
     # Skip expensive PDF parsing when the same in-memory document is already prepared.
-    if reuse_if_ready and pre_fetched_chunks:
+    if reuse_if_ready and pre_fetched_chunks and current_pdf_name == file.filename:
         return {
             "success": True,
             "message": "Reusing existing processed document.",
-            "total_questions_set": total_questions,
+            # "total_questions_set": total_questions,
             "reused": True,
         }
 
@@ -64,6 +66,7 @@ async def upload_pdf(
 
         chunks = chunk_markdown_text(pdf_text)
         active_vector_store = create_vector_store(chunks)
+        current_pdf_name = file.filename
 
         # ---------------------------------------------------------
         # NEW PRO ARCHITECTURE: Syllabus Mapping & Dense Fetching
@@ -81,53 +84,80 @@ async def upload_pdf(
         if not toc_string.strip():
             toc_string = "General Academic Content" # Fallback if no headers found
 
-        target_topics = total_questions + 5
+        # target_topics = total_questions + 5
 
         # 2. Ask LLM to pick the most important topics based on TOC
         priority_prompt = f"""
-        Here is the Table of Contents / Key Headings of an academic document:
+        You are an elite academic curriculum designer and university textbook author. 
+        Below is the Table of Contents (TOC) of a specific academic document we are studying:
         [{toc_string}]
         
-        Identify the top {target_topics} MOST IMPORTANT, dense, and core concepts that would make good viva/exam questions.
-        Rank them in priority order.
+        Your task is to identify the 15 MOST CRITICAL and dense academic concepts from this TOC that would make for rigorous viva/oral exam questions. Rank them in priority order.
         
-        OUTPUT STRICTLY AS A JSON ARRAY OF STRINGS ONLY.
-        Example: ["Thermodynamics", "Newton's First Law", ...]
+        For EACH concept, generate a 'hypothetical_paragraph' (approx 50-80 words). 
+        This paragraph must be written EXACTLY as if it were an excerpt pulled directly from a high-level textbook on this specific subject. 
+        Use dense academic terminology, a formal tone, and ensure the scientific/academic context STRICTLY ALIGNS with the domain implied by the TOC.
+
+        OUTPUT STRICTLY AS A VALID JSON ARRAY OF OBJECTS ONLY. NO extra text, NO markdown.
+        Example Format:
+        [
+            {{
+                "topic": "Newton's First Law",
+                "hypothetical_paragraph": "Newton's first law of motion, often referred to as the law of inertia, postulates that a physical body will remain at rest, or continue to move at a constant velocity in a straight line, unless acted upon by a net external force. This principle establishes the fundamental relationship between force and the state of motion..."
+            }}
+        ]
         """
 
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": priority_prompt}],
-            temperature=0.2,
-            response_format={"type": "json_object"}
-        )
         
-        # Try to parse the array, handle if LLM wraps it in an object {"topics": [...]}
-        res_text = json.loads(response.choices[0].message.content)
-        top_topics = res_text if isinstance(res_text, list) else res_text.get("topics", [])
-        
-        if not isinstance(top_topics, list) or len(top_topics) == 0:
-            top_topics = list(toc_set)[:target_topics] # Absolute fallback
+        try:
+            response = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[{"role": "user", "content": priority_prompt}],
+                temperature=0.3, # Thoda sa creative freedom diya taaki paragraph achha likhe
+                response_format={"type": "json_object"}
+            )
+            
+            raw_response = response.choices[0].message.content.strip()
+            
+            # Clean Markdown if exists (safety)
+            if raw_response.startswith("```json"):
+                raw_response = raw_response.replace("```json", "", 1).replace("```", "")
+            
+            res_json = json.loads(raw_response)
+            
+            # Handle array vs object response from LLM
+            hyde_topics = res_json if isinstance(res_json, list) else res_json.get("topics", [])
+            
+        except Exception as e:
+            print(f"⚠️ HyDE Generation failed, falling back to simple TOC: {e}")
+            hyde_topics = [{"topic": t, "hypothetical_paragraph": t} for t in list(toc_set)[:15]]
 
-        print(f"🌟 AI Prioritized Topics: {top_topics}")
+        print(f"🌟 Generated {len(hyde_topics)} HyDE Contexts successfully!")
 
-        # 3. Pre-fetch the densest chunk for each priority topic
+        # 3. Pre-fetch using Symmetric Search (HyDE)
         pre_fetched_chunks.clear()
-        for topic in top_topics:
-            # Get top 3 chunks for this specific topic
-            docs = active_vector_store.similarity_search(topic, k=3)
+        
+        for item in hyde_topics:
+            topic_name = item.get("topic", "")
+            # THE MAGIC: Hum single word ('topic_name') se search nahi kar rahe, 
+            # Hum poore 'hypothetical_paragraph' (Fake Document) se search kar rahe hain!
+            search_query = item.get("hypothetical_paragraph", topic_name) 
+            
+            # Get top 3 chunks matching the Fake Paragraph
+            docs = active_vector_store.similarity_search(search_query, k=3)
+            
             if docs:
-                # Sort by length to guarantee we pick the most dense/detailed chunk
+                # Still sort by length to ensure we get the densest chunk among the top matches
                 dense_doc = sorted(docs, key=lambda x: len(x.page_content), reverse=True)[0]
                 pre_fetched_chunks.append(dense_doc.page_content)
         
-        print(f"📦 Successfully pre-fetched {len(pre_fetched_chunks)} highly dense chunks!")
+        print(f"📦 Successfully pre-fetched {len(pre_fetched_chunks)} highly accurate chunks using HyDE!")
         # ---------------------------------------------------------
 
         return {
             "success": True, 
             "message": "PDF Processed and Viva Syllabus Ready!",
-            "total_questions_set": total_questions
+            # "total_questions_set": total_questions
         }
     except Exception as e:
         print(f"Error in upload: {e}")
@@ -140,16 +170,21 @@ async def upload_pdf(
 # ==========================================
 @router.post("/generate")
 async def generate_question(req: GenerateRequest):
-    global pre_fetched_chunks
+    global pre_fetched_chunks,chunk_pointer
     if not pre_fetched_chunks:
         raise HTTPException(status_code=400, detail="Please upload a PDF first.")
-
+    if req.current_q_no == 0:
+        chunk_pointer = 0
     # 🔄 AUTO-RETRY LOOP (Max 3 attempts to avoid bad chunks or API failures)
     for attempt in range(3):
-        # Current question number ke hisaab se chunk uthao.
-        # Offset by attempt so we try a DIFFERENT chunk if the first one fails!
-        chunk_index = (req.current_q_no + attempt) % len(pre_fetched_chunks)
+        chunk_index = chunk_pointer % len(pre_fetched_chunks)
         chunk_text = pre_fetched_chunks[chunk_index]
+        
+        # 🚀 THE FIX: Pointer ko turant aage badha do!
+        # Isse agar ye chunk JUNK nikla, toh agla attempt khud naye chunk par jayega
+        # Aur agar SUCCESS nikla, toh next Question naye chunk se shuru hoga!
+        chunk_pointer += 1 
+
 
         print("\n" + "="*50)
         print(f"🛑 STOP & READ: Chunk given to AI for Q{req.current_q_no + 1} (Attempt {attempt + 1})")
@@ -158,20 +193,23 @@ async def generate_question(req: GenerateRequest):
         print("="*50 + "\n")
 
         prompt = f"""
-        You are an elite, strict University Viva Examiner.
-        Based ONLY on the provided context, generate EXACTLY ONE {req.difficulty} level {req.q_type} question.
-        Focus on the domain: {req.domain}.
-        
-        CRITICAL RULES:
-        1. If the context is just an index, table, promotional content, or lacks deep academic theory, output "is_junk": true.
-        2. Otherwise, formulate a highly challenging question. Output "is_junk": false.
-        
+        You are an elite, notoriously strict University Professor conducting a high-stakes Viva exam.
+        Based EXCLUSIVELY on the provided context, generate EXACTLY ONE {req.difficulty}-level {req.q_type} question.
+        Focus heavily on the domain: {req.domain}.
+
+        CRITICAL QUALITY RULES (MUST FOLLOW):
+        1. JUNK DETECTION: If the context is merely a table of contents, index, promotional filler, or lacks substantial academic theory to form a deep question, output "is_junk": true.
+        2. NO GENERIC QUESTIONS: DO NOT ask simple "What is X?" or "Define Y" questions. Test deep conceptual understanding, application, edge-cases, or "Why/How" reasoning.
+        3. REAL-WORLD ILLUSION: NEVER use phrases like "According to the text", "Based on the context", or "As mentioned in the paragraph". The question must sound like it is coming naturally from a professor's mind.
+        4. PLAUSIBLE DISTRACTORS (If MCQ): If the type is MCQ, the wrong options MUST NOT be obviously wrong. They must represent common student misconceptions or mathematically/logically close errors. 
+        5. GROUNDING: The correct answer MUST be 100% provable using ONLY the provided context. Do not hallucinate outside knowledge.
+
         Output strictly as a valid JSON object ONLY:
         {{
             "is_junk": false,
-            "question": "...",
-            "options": ["A...", "B...", "C...", "D..."], // Only if MCQ, else empty array
-            "correct_answer": "..."
+            "question": "...", // The highly analytical viva question
+            "options": ["A...", "B...", "C...", "D..."], // Only if MCQ, else an empty array []
+            "correct_answer": "..." // The exact, detailed correct answer expected from a top-tier student
         }}
 
         CONTEXT:

@@ -15,13 +15,13 @@ def create_vector_store(chunks: list[Document], collection_name: str = "viva_doc
         print("🧠 Converting chunks to Vectors & saving to ChromaDB...")
         
         # Hum database ko apne backend folder mein ek 'chroma_db' naam ke folder mein save karenge
-        persist_directory = "./chroma_db"
+        # persist_directory = "./chroma_db"
         
         # ChromaDB vector store create karna
         vectorstore = Chroma.from_documents(
             documents=chunks, 
             embedding=embeddings,
-            persist_directory=persist_directory,
+            # persist_directory=persist_directory,
             collection_name=collection_name
         )
         

@@ -1,6 +1,6 @@
 import re
 
-def extract_badhiya_content(chunks):
+def extract_useful_content(chunks):
     """
     Yeh function saare chunks ko check karega aur sirf 'Pure Academic Content' ko aage jane dega.
     """

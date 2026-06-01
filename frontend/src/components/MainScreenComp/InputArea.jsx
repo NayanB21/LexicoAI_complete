@@ -11,59 +11,89 @@ export default function InputArea({ viva, ui, vivaSession }) {
   const [isUploadComplete, setIsUploadComplete] = useState(false);
   const [showStartPrompt, setShowStartPrompt] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
 
-  const handleAttachmentClick = () => fileInputRef.current.click();
-
-  const processFile = async (file) => {
-    if (file && file.type === "application/pdf") {
-      setIsUploading(true);
-      setIsUploadComplete(false);
-      setShowStartPrompt(false);
-      setUploadedFileName(file.name || '');
-      
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('total_questions', 10); // Default set kiya hai
-
-      try {
-        const res = await fetch(buildApiUrl('/api/viva/upload'), {
-          method: 'POST',
-          body: formData,
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-          setIsUploadComplete(true);
-          setShowStartPrompt(true);
-          if (vivaSession?.setSessionFromUpload) {
-            vivaSession.setSessionFromUpload(file.name || 'Untitled Document');
-          }
-        } else {
-          alert("Backend Error: " + (data.detail || "Upload failed"));
-        }
-      } catch (error) {
-        alert("Server connect nahi ho pa raha! Backend terminal chalu hai?");
-      }
-      setIsUploading(false);
-      
-    } else if (file) {
-      alert("Bhai, sirf PDF files allowed hain!");
-    }
+  const handleAttachmentClick = () => {
+    if (fileInputRef.current) {
+    fileInputRef.current.value = ''; 
+  }
+  fileInputRef.current.click();
   };
 
-  const handleFileChange = (e) => processFile(e.target.files[0]);
+
+const handleConfirmUploadAndStart = async () => {
+  if (!selectedFile) return;
+
+  setIsUploading(true);
+  setShowStartPrompt(false); // Upload ke time prompt hata do
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+  // formData.append('total_questions', 10);
+
+  try {
+    const res = await fetch(buildApiUrl('/api/viva/upload?reuse_if_ready=true'), {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      setIsUploadComplete(true);
+      if (vivaSession?.setSessionFromUpload) {
+        vivaSession.setSessionFromUpload(selectedFile.name || 'Untitled Document');
+      }
+      // Upload success hone par seedha navigate kar do
+      navigate('/viva/session'); 
+    } else {
+      setIsUploading(false);
+      setShowStartPrompt(true);
+      alert("Backend Error: " + (data.detail || "Upload failed"));
+    }
+  } catch (error) {
+    setIsUploading(false);
+    console.error("Upload error:", error);
+    alert("Server error. Please try again.");
+  }
+};
+
+const handleFileSelect = (file) => {
+  if (file && file.type === "application/pdf") {
+    // File ko locally store karo
+    setSelectedFile(file);
+    setUploadedFileName(file.name);
+    // User ko prompt dikhao (Yes / Re-upload)
+    setShowStartPrompt(true);
+  } else {
+    alert("Only PDF files are allowed!");
+  }
+};
+
+
+  const handleFileChange = (e) => handleFileSelect(e.target.files[0]);
   
   const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
-  const handleDrop = (e) => { e.preventDefault(); setIsDragging(false); processFile(e.dataTransfer.files[0]); };
+  const handleDrop = (e) => { e.preventDefault(); setIsDragging(false); handleFileSelect(e.dataTransfer.files[0]); };
 
   const handleStartViva = () => {
     navigate('/viva/session');
   };
 
-  const handleDeclineStart = () => {
-    setShowStartPrompt(false);
-  };
+
+const handleReupload = () => {
+  setSelectedFile(null);
+  setUploadedFileName('');
+  setShowStartPrompt(false);
+  setIsUploadComplete(false);
+  
+  // Wapas file selection dialog khol do
+  if (fileInputRef.current) {
+    fileInputRef.current.value = '';
+  }
+
+  alert('Please upload a new PDF.');
+};
 
   return (
     <div className="p-4 w-full z-20">
@@ -116,7 +146,7 @@ export default function InputArea({ viva, ui, vivaSession }) {
         End-to-End Encrypted. Processed strictly in-memory.
       </p>
 
-      {isUploadComplete && showStartPrompt && (
+      {selectedFile && !isUploading && showStartPrompt && (
         <div className="mt-5 rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-950/40 to-slate-900/70 p-4 md:p-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <p className="text-sm md:text-base font-semibold text-white">
             PDF ready: <span className="text-indigo-300">{uploadedFileName || 'Untitled Document'}</span>
@@ -125,17 +155,17 @@ export default function InputArea({ viva, ui, vivaSession }) {
 
           <div className="mt-4 flex flex-wrap gap-3">
             <button
-              onClick={handleStartViva}
+              onClick={handleConfirmUploadAndStart}
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all"
             >
               Yes
             </button>
-            <button
-              onClick={handleDeclineStart}
-              className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-gray-200 font-semibold hover:bg-white/10 transition-colors"
-            >
-              No
-            </button>
+  <button
+    onClick={handleReupload}
+    className="px-5 py-2.5 rounded-xl border border-slate-600 bg-slate-800 text-slate-200 font-semibold hover:bg-slate-700 transition-all"
+  >
+    Reupload PDF
+  </button>
           </div>
         </div>
       )}

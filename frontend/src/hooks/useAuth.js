@@ -4,7 +4,7 @@ import { buildApiUrl } from '../config/api';
 export const useAuth = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [isLoginView, setIsLoginView] = useState(true);
-const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);
 
 
   // NAYA: FastAPI ke error objects ko normal string mein badalne wala helper
@@ -12,7 +12,7 @@ const [user, setUser] = useState(null);
     if (data.detail) {
       if (Array.isArray(data.detail)) {
         // Agar 422 validation error hai, toh pehla error message dikhao
-        return data.detail[0].msg; 
+        return data.detail[0].msg;
       }
       if (typeof data.detail === 'string') {
         // Agar humara custom error hai (jaise "Invalid password")
@@ -22,13 +22,13 @@ const [user, setUser] = useState(null);
     return "Something went wrong!";
   };
 
-useEffect(() => {
+  useEffect(() => {
     const fetchUserProfile = async () => {
       if (!token) return;
       try {
         const response = await fetch(buildApiUrl('/api/auth/me'), {
-          headers: { 
-            "Authorization": `Bearer ${token}` 
+          headers: {
+            "Authorization": `Bearer ${token}`
           }
         });
         if (response.ok) {
@@ -81,9 +81,11 @@ useEffect(() => {
       const data = await response.json();
 
       if (response.ok) {
-           return { success: true,
-              message: "Registration successful! Please login." };
-            
+        return {
+          success: true,
+          message: "Registration successful! Please login."
+        };
+
       } else {
         // 🔥 ERROR FIX YAHAN HAI
         return { success: false, error: formatError(data) };
@@ -99,5 +101,5 @@ useEffect(() => {
     setUser(null);
   };
 
-  return { token,user, isLoginView, setIsLoginView, login, register, logout };
+  return { token, user, isLoginView, setIsLoginView, login, register, logout };
 };

@@ -13,7 +13,7 @@ async def upload_document(
     file: UploadFile = File(...),
 
     # difficulty: str = Form(...),
-    questions: str = Form(...),
+    # questions: str = Form(...),
     # voiceMode: str = Form(...),
     # counterQuestions: str = Form(...)
 
@@ -31,19 +31,19 @@ async def upload_document(
         raise HTTPException(status_code=500, detail="Failed to extract text from PDF.")
 
     # 🌟 FIX: Saari settings ko ek Dictionary mein pack karo
-    user_settings = {
-        # "difficulty": difficulty,
-        "questions": questions,
-        # "voiceMode": voiceMode,
-        # "counterQuestions": counterQuestions,
-        "type": "MCQ",       # Default for now (can be passed from frontend later)
-        "domain": "General"  # Default for now (can be passed from frontend later)
-    }
+    # user_settings = {
+    #     # "difficulty": difficulty,
+    #     # "questions": questions,
+    #     # "voiceMode": voiceMode,
+    #     # "counterQuestions": counterQuestions,
+    #     "type": "MCQ",       # Default for now (can be passed from frontend later)
+    #     "domain": "General"  # Default for now (can be passed from frontend later)
+    # }
     # Process the PDF
-    result = await main_process(pdf_text, user_settings)
+    result = await main_process(pdf_text,)
 
     return {
         "success": True,
-        "questions": result, # AI ke generate kiye hue questions wapas bhej rahe hain
-        "text_preview": pdf_text[:500],
+        # "questions": result, # AI ke generate kiye hue questions wapas bhej rahe hain
+        # "text_preview": pdf_text[:500],
     }
