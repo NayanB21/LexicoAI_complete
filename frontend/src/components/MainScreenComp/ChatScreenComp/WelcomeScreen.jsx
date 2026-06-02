@@ -1,6 +1,6 @@
 import InputArea from '../InputArea'
 
-export default function WelcomeScreen({ ui, viva, vivaSession }) {
+export default function WelcomeScreen({ ui, auth, viva, vivaSession, vivaHistory }) {
   return (
     <div className="flex-1 p-3 sm:p-4 overflow-y-auto flex flex-col items-center justify-center space-y-6 sm:space-y-8">
       
@@ -16,7 +16,7 @@ export default function WelcomeScreen({ ui, viva, vivaSession }) {
 
       {/* Upload Box perfectly stacked below the text */}
       <div className="w-full max-w-3xl">
-        <InputArea ui={ui} viva={viva} vivaSession={vivaSession} />
+        <InputArea ui={ui} auth={auth} viva={viva} vivaSession={vivaSession} vivaHistory={vivaHistory} />
       </div>
 
     </div>

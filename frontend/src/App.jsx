@@ -41,7 +41,7 @@ function App() {
     <Routes>
       <Route
         path="/"
-        element={withSidebarLayout(<MainScreen ui={ui} viva={viva} vivaSession={vivaSession} />)}
+        element={withSidebarLayout(<MainScreen ui={ui} auth={auth} viva={viva} vivaSession={vivaSession} vivaHistory={vivaHistory} />)}
       />
       <Route
         path="/viva/session"

@@ -45,7 +45,7 @@ export default function VivaHistoryList({ sessions = [], isLoading }) {
           <button
             key={session.id}
             type="button"
-            onClick={() => navigate(`/viva/history/${session.id}`)}
+            onClick={() => navigate(`/viva/history/${session.session_id || session.id}?attempt=${session.attempt_no ?? 1}`)}
             className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
               isActive
                 ? 'border-indigo-500/50 bg-indigo-500/15 shadow-[0_0_20px_rgba(99,102,241,0.15)]'

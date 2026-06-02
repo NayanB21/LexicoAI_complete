@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import ChatInterface from '../components/MainScreenComp/ChatScreenComp/ChatInterface';
 import VivaSessionWelcome from '../components/viva-session/VivaSessionWelcome';
 import VivaSetupWizard from '../components/viva-session/VivaSetupWizard';
+import { buildApiUrl } from '../config/api';
 
-const buildHistoryPayload = (sessionData, fileName) => ({
+const buildHistoryPayload = (sessionData, fileName, startedAtIso) => ({
   title: fileName,
   source_file_name: fileName,
+  started_at: startedAtIso,
+  completed_at: new Date().toISOString(),
   setup: {
     difficulty: sessionData.settings.difficulty || 'Medium',
     question_type: sessionData.settings.q_type || 'MCQ',
@@ -24,7 +28,10 @@ const buildHistoryPayload = (sessionData, fileName) => ({
 });
 
 export default function VivaSessionPage({ vivaSession, vivaHistory }) {
-  const fileName = vivaSession?.uploadedFileName || 'Untitled Document';
+  const location = useLocation();
+  const runtimeBootstrap = location.state?.runtimeBootstrap || null;
+  const reattemptSessionId = location.state?.reattemptSessionId || null;
+  const fileName = location.state?.fileName || vivaSession?.uploadedFileName || 'Untitled Document';
   const [currentStep, setCurrentStep] = useState(0);
   const [setup, setSetup] = useState({
     questions: null,
@@ -36,6 +43,43 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
   const [runtimeKey, setRuntimeKey] = useState(0);
   const [savedSessionId, setSavedSessionId] = useState(null);
   const [performanceAnalysis, setPerformanceAnalysis] = useState(null);
+  const [isRuntimeReady, setIsRuntimeReady] = useState(!runtimeBootstrap);
+  const [runtimeError, setRuntimeError] = useState('');
+  const [sessionStartedAt, setSessionStartedAt] = useState(new Date().toISOString());
+
+  useEffect(() => {
+    let mounted = true;
+    const bootstrapRuntime = async () => {
+      if (!runtimeBootstrap) return;
+      setIsRuntimeReady(false);
+      setRuntimeError('');
+      try {
+        const res = await fetch(buildApiUrl('/api/viva/reattempt/bootstrap'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            source_file_name: runtimeBootstrap.source_file_name,
+            important_topics: runtimeBootstrap.important_topics || [],
+            important_chunks: runtimeBootstrap.important_chunks || [],
+            previous_questions: runtimeBootstrap.previous_questions || [],
+          }),
+        });
+        if (!res.ok) throw new Error('Failed to load reattempt knowledge base');
+        if (mounted) {
+          setSessionStartedAt(new Date().toISOString());
+          setIsRuntimeReady(true);
+        }
+      } catch (err) {
+        if (mounted) {
+          setRuntimeError(err?.message || 'Failed to start reattempt.');
+        }
+      }
+    };
+    bootstrapRuntime();
+    return () => {
+      mounted = false;
+    };
+  }, [runtimeBootstrap]);
 
   const handleChange = (field, value) => {
     setSetup((prev) => ({ ...prev, [field]: value }));
@@ -58,6 +102,7 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
   };
 
   const handleStartRuntime = () => {
+    setSessionStartedAt(new Date().toISOString());
     setIsRuntimeActive(true);
   };
 
@@ -65,10 +110,12 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
   const handleSessionComplete = async (sessionData) => {
     if (!vivaHistory?.saveSession) return;
 
-    const payload = buildHistoryPayload(sessionData, fileName);
+    const payload = buildHistoryPayload(sessionData, fileName, sessionStartedAt);
 
     try {
-      const data = await vivaHistory.saveSession(payload);
+      const data = reattemptSessionId
+        ? await vivaHistory.appendReattempt(reattemptSessionId, payload)
+        : await vivaHistory.saveSession(payload);
       if (data?.session_id) {
         setSavedSessionId(data.session_id);
       }
@@ -154,6 +201,15 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
           </div>
         ) : (
           <section className="flex min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {!isRuntimeReady ? (
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-gray-300">
+                Preparing reattempt runtime...
+              </div>
+            ) : runtimeError ? (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
+                {runtimeError}
+              </div>
+            ) : (
             <ChatInterface
               key={runtimeKey}
               runtimeKey={runtimeKey}
@@ -165,6 +221,7 @@ export default function VivaSessionPage({ vivaSession, vivaHistory }) {
               hasAnalysis={!!performanceAnalysis}
               onGenerateAnalysis={handleGenerateAnalysis}
             />
+            )}
           </section>
         )}
       </main>

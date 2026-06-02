@@ -8,13 +8,14 @@ from app.core.security import SECRET_KEY, ALGORITHM
 from app.models.viva_history import (
     VivaSessionCreateRequest,
     VivaSessionDetail,
-    VivaSessionListItem,
     VivaSessionReattemptRequest,
 )
 from app.services.viva_analysis_service import generate_performance_analysis
 from app.services.viva_history_service import (
     append_reattempt,
     create_viva_session,
+    get_profile_stats,
+    get_source_file_and_questions,
     get_viva_session_by_id,
     list_viva_sessions,
     save_performance_analysis,
@@ -48,7 +49,7 @@ async def save_viva_session(payload: VivaSessionCreateRequest, token: str = Depe
     return {"success": True, "session_id": session_id}
 
 
-@router.get("", response_model=list[VivaSessionListItem])
+@router.get("")
 async def get_viva_sessions(
     token: str = Depends(oauth2_scheme),
     limit: int = Query(default=30, ge=1, le=100),
@@ -98,7 +99,15 @@ async def generate_viva_performance_analysis(
         )
 
     try:
-        analysis = await generate_performance_analysis(session)
+        current_attempt = session.get("current_attempt") or {}
+        analysis = await generate_performance_analysis(
+            {
+                "setup": current_attempt.get("setup", {}),
+                "result": current_attempt.get("result", {}),
+                "history": current_attempt.get("history", []),
+                "completion_status": current_attempt.get("completion_status", "completed"),
+            }
+        )
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
@@ -137,3 +146,55 @@ async def get_viva_session_detail(session_id: str, token: str = Depends(oauth2_s
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
+
+
+@router.get("/profile/stats")
+async def get_viva_profile_stats(token: str = Depends(oauth2_scheme)):
+    db = get_db()
+    user_id = _decode_user_id(token)
+    return await get_profile_stats(db, user_id)
+
+
+@router.post("/{session_id}/reattempt/start")
+async def start_reattempt_runtime(session_id: str, token: str = Depends(oauth2_scheme)):
+    db = get_db()
+    user_id = _decode_user_id(token)
+
+    if not ObjectId.is_valid(session_id):
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    data = await get_source_file_and_questions(db, user_id, session_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    stored_chunks = data.get("important_chunks", [])
+    if not stored_chunks:
+        kb = await db["document_knowledge_bases"].find_one(
+            {
+                "user_id": ObjectId(user_id),
+                "document_name": data["source_file_name"],
+            }
+        )
+        if kb:
+            stored_chunks = kb.get("important_chunks", [])
+    if not stored_chunks:
+        raise HTTPException(
+            status_code=404,
+            detail="Knowledge base not found for this document. Please upload the PDF again.",
+        )
+
+    return {
+        "success": True,
+        "session_id": session_id,
+        "source_file_name": data["source_file_name"],
+        "next_attempt_no": data["attempt_count"] + 1,
+        "important_topics": list(
+            {
+                c.get("topic", "General")
+                for c in stored_chunks
+                if isinstance(c, dict) and (c.get("topic") or "").strip()
+            }
+        ),
+        "important_chunks": stored_chunks,
+        "previous_questions": data.get("previous_questions", []),
+    }

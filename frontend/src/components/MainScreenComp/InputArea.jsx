@@ -3,7 +3,7 @@ import { UploadCloud, FileText, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { buildApiUrl } from '../../config/api';
 
-export default function InputArea({ viva, ui, vivaSession }) {
+export default function InputArea({ auth, viva, ui, vivaSession, vivaHistory }) {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
   const [isDragging, setIsDragging] = useState(false);
@@ -34,6 +34,7 @@ const handleConfirmUploadAndStart = async () => {
   try {
     const res = await fetch(buildApiUrl('/api/viva/upload?reuse_if_ready=true'), {
       method: 'POST',
+      headers: auth?.token ? { Authorization: `Bearer ${auth.token}` } : undefined,
       body: formData,
     });
     const data = await res.json();
@@ -42,6 +43,9 @@ const handleConfirmUploadAndStart = async () => {
       setIsUploadComplete(true);
       if (vivaSession?.setSessionFromUpload) {
         vivaSession.setSessionFromUpload(selectedFile.name || 'Untitled Document');
+      }
+      if (vivaHistory?.fetchStats) {
+        vivaHistory.fetchStats();
       }
       // Upload success hone par seedha navigate kar do
       navigate('/viva/session'); 

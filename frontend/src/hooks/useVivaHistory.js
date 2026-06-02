@@ -9,6 +9,8 @@ const getAuthHeaders = (token) => ({
 export const useVivaHistory = (token) => {
   const [sessions, setSessions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(false);
 
   const fetchHistory = useCallback(async () => {
     if (!token) return;
@@ -33,6 +35,27 @@ export const useVivaHistory = (token) => {
     fetchHistory();
   }, [fetchHistory]);
 
+  const fetchStats = useCallback(async () => {
+    if (!token) return;
+    setIsStatsLoading(true);
+    try {
+      const res = await fetch(buildApiUrl('/api/viva/history/profile/stats'), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch profile stats');
+      const data = await res.json();
+      setStats(data);
+    } catch (error) {
+      console.error('Failed to load profile stats:', error);
+    } finally {
+      setIsStatsLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
   const saveSession = useCallback(
     async (payload) => {
       if (!token) return null;
@@ -46,9 +69,10 @@ export const useVivaHistory = (token) => {
       }
       const data = await res.json();
       await fetchHistory();
+      await fetchStats();
       return data;
     },
-    [token, fetchHistory],
+    [token, fetchHistory, fetchStats],
   );
 
   const getSessionDetail = useCallback(
@@ -91,9 +115,10 @@ export const useVivaHistory = (token) => {
       }
       const data = await res.json();
       await fetchHistory();
+      await fetchStats();
       return data.performance_analysis;
     },
-    [token, fetchHistory, getSessionDetail],
+    [token, fetchHistory, getSessionDetail, fetchStats],
   );
 
   const appendReattempt = useCallback(
@@ -109,18 +134,39 @@ export const useVivaHistory = (token) => {
       }
       const data = await res.json();
       await fetchHistory();
+      await fetchStats();
       return data;
     },
-    [token, fetchHistory],
+    [token, fetchHistory, fetchStats],
+  );
+
+  const startReattempt = useCallback(
+    async (sessionId) => {
+      if (!token) return null;
+      const res = await fetch(buildApiUrl(`/api/viva/history/${sessionId}/reattempt/start`), {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.detail || 'Failed to start reattempt');
+      }
+      return res.json();
+    },
+    [token],
   );
 
   return {
     sessions,
     isLoading,
+    stats,
+    isStatsLoading,
     fetchHistory,
+    fetchStats,
     saveSession,
     getSessionDetail,
     generateAnalysis,
     appendReattempt,
+    startReattempt,
   };
 };

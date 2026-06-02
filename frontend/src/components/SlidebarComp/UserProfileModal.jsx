@@ -1,5 +1,5 @@
 import { X, Mail, BookOpen, CheckCircle2, TrendingUp, Trophy, Calendar } from 'lucide-react';
-import { computeVivaStatsFromSessions, formatStatDate } from '../../utils/vivaStats';
+import { formatStatDate } from '../../utils/vivaStats';
 
 function StatCard({ icon: Icon, value, label, iconClass }) {
   return (
@@ -16,13 +16,16 @@ export default function UserProfileModal({ ui, auth, vivaHistory }) {
 
   const userName = auth?.user?.name || 'User';
   const userEmail = auth?.user?.email || '';
-  const sessions = vivaHistory?.sessions ?? [];
-  const stats = computeVivaStatsFromSessions(sessions);
+  const stats = vivaHistory?.stats || null;
+  const isLoadingStats = !!vivaHistory?.isStatsLoading;
 
   const avgDisplay =
-    stats.averageScore != null ? `${(stats.averageScore * 100).toFixed(0)}%` : '—';
+    stats?.average_score_percentage != null ? `${Math.round(stats.average_score_percentage)}%` : '--';
   const bestDisplay =
-    stats.bestScore != null ? `${(stats.bestScore * 100).toFixed(0)}%` : '—';
+    stats?.best_score_percentage != null
+      ? `${Math.round(stats.best_score_percentage)}%${stats?.best_score_context?.attempt_no ? ` • Attempt #${stats.best_score_context.attempt_no}` : stats?.best_score_context?.source_file_name ? ` • ${stats.best_score_context.source_file_name}` : ''}`
+      : '--';
+  const hasData = (stats?.total_vivas || 0) > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -59,20 +62,20 @@ export default function UserProfileModal({ ui, auth, vivaHistory }) {
           <div className="w-full">
             <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 text-left">
               Viva statistics
-              {vivaHistory?.isLoading ? (
+              {isLoadingStats ? (
                 <span className="ml-2 text-xs font-normal normal-case text-gray-500">Updating…</span>
               ) : null}
             </h3>
-            {stats.totalVivas === 0 ? (
+            {!hasData ? (
               <p className="text-sm text-gray-500 text-center py-4">
-                Complete a viva to see your statistics here.
+                Total Vivas: 0 · Completed: 0 · Average Score: -- · Best Score: -- · Last Attempt: Never
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                <StatCard icon={BookOpen} value={stats.totalVivas} label="Total vivas" iconClass="text-blue-400" />
+                <StatCard icon={BookOpen} value={stats.total_vivas ?? 0} label="Total vivas" iconClass="text-blue-400" />
                 <StatCard
                   icon={CheckCircle2}
-                  value={stats.completedVivas}
+                  value={stats.completed_vivas ?? 0}
                   label="Completed"
                   iconClass="text-emerald-400"
                 />
@@ -82,7 +85,7 @@ export default function UserProfileModal({ ui, auth, vivaHistory }) {
                   <Calendar className="text-cyan-400 shrink-0" size={18} />
                   <div>
                     <span className="text-sm font-semibold text-white">
-                      {formatStatDate(stats.lastAttemptDate)}
+                      {formatStatDate(stats?.last_attempt_at ? new Date(stats.last_attempt_at) : null)}
                     </span>
                     <span className="block text-xs text-gray-500 mt-0.5">Last attempt</span>
                   </div>

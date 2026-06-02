@@ -359,6 +359,7 @@ export const useVivaChat = (initialSetupConfig = null, options = {}) => {
         a: userAnswer,
         e: evalData,
         hidden_context: currentQuestionData.hidden_context || '',
+        topic: currentQuestionData.topic || settingsRef.current.domain || 'General',
       };
 
       setHistory((prev) => {
