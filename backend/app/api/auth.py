@@ -32,14 +32,14 @@ async def register_user(user: UserCreate):
     result = await db["users"].insert_one(user_dict)
     
     # 4. Return success response
-    # return UserResponse(
-    #     id=str(result.inserted_id),
-    #     name=user.name,
-    #     email=user.email
-    # )
-    return  {
-   "success": True
-}
+    return UserResponse(
+        id=str(result.inserted_id),
+        name=user.name,
+        email=user.email
+    )
+#     return  {
+#    "success": True
+# }
 
 @router.post("/login", response_model=Token)
 async def login_user(user: UserLogin):

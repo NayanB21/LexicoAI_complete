@@ -341,6 +341,8 @@ export const useVivaChat = (initialSetupConfig = null, options = {}) => {
           question: currentQuestionData.question,
           user_answer: userAnswer,
           hidden_context: currentQuestionData.hidden_context,
+          correct_answer: currentQuestionData.correct_answer,
+
         }),
       });
       if (!res.ok) throw new Error('Evaluation failed');

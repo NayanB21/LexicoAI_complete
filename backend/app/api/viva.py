@@ -38,6 +38,7 @@ class EvaluateRequest(BaseModel):
     question: str
     user_answer: str
     hidden_context: str
+    correct_answer: str
 
 
 def _decode_user_id_from_header(authorization: Optional[str]) -> Optional[str]:
@@ -348,6 +349,31 @@ async def generate_question(req: GenerateRequest):
         4. PLAUSIBLE DISTRACTORS (If MCQ): If the type is MCQ, the wrong options MUST NOT be obviously wrong. They must represent common student misconceptions or mathematically/logically close errors. 
         5. GROUNDING: The correct answer MUST be 100% provable using ONLY the provided context. Do not hallucinate outside knowledge.
         {avoid_block}
+        6. SELF-CONTAINED QUESTION REQUIREMENT:
+
+The student will only see the final generated question.
+
+The student will NOT see:
+- the source context
+- equation numbers
+- figure numbers
+- tables
+- diagrams
+- previous examples
+
+Therefore every question MUST be fully self-contained.
+
+Never reference:
+- "Equation 1.10"
+- "Figure 2.3"
+- "the graph above"
+- "the table below"
+- "the previous example"
+
+If information from any equation, figure, table, or example is needed,
+explicitly include that information inside the question itself if you have it from the context.
+
+Before generating the final question, verify that a student who has never seen the source document can still understand exactly what is being asked.
 
         Output strictly as a valid JSON object ONLY:
         {{
@@ -464,20 +490,85 @@ async def bootstrap_reattempt_runtime(req: ReattemptBootstrapRequest):
 @router.post("/evaluate")
 async def evaluate_answer(req: EvaluateRequest):
     prompt = f"""
-    You are an evaluator. 
-    Question: {req.question}
-    User Answer: {req.user_answer}
-    
-    Check if the user's answer is correct based ONLY on this context:
-    {req.hidden_context}
+You are an extremely strict Viva Examiner and Academic Evaluator.
 
-    Output strictly as JSON:
-    {{
-        "score": 1, // 1 for correct/partially correct, 0 for wrong
-        "feedback": "Explain why it is correct or wrong briefly.",
-        "exact_reference": "EXTRACT AND COPY-PASTE the exact sentence from the context that proves the answer. Do not change a single word."
-    }}
-    """
+QUESTION:
+{req.question}
+
+STUDENT ANSWER:
+{req.user_answer}
+
+EXPECTED CORRECT ANSWER:
+{req.correct_answer}
+
+REFERENCE CONTEXT:
+{req.hidden_context}
+
+EVALUATION RULES (MUST FOLLOW):
+
+1. Evaluate ONLY what is explicitly written in the student's answer.
+
+2. Do NOT assume what the student meant.
+
+3. Do NOT infer missing knowledge.
+
+4. Do NOT reward effort, intent, guesses, partially typed thoughts, or vague responses.
+
+5. A correct answer must contain meaningful academic information that matches the expected answer and is supported by the reference context.
+
+6. The following should ALWAYS receive score = 0:
+   - Empty answers
+   - "?"
+   - "."
+   - "..."
+   - "-"
+   - "idk"
+   - "I don't know"
+   - Random text
+   - Irrelevant responses
+   - Answers that contain no meaningful academic content
+
+7. Minor wording differences are acceptable if the underlying concept is correct.
+
+8. Use the EXPECTED CORRECT ANSWER as the PRIMARY grading reference.
+
+9. Use the REFERENCE CONTEXT only to verify correctness and provide evidence.
+
+SCORING:
+
+score = 1
+- Answer is correct or substantially correct.
+- Core concept is present.
+- Demonstrates meaningful understanding.
+
+score = 0
+- Answer is incorrect.
+- Answer is irrelevant.
+- Answer is meaningless.
+- Answer lacks sufficient information to demonstrate understanding.
+
+FEEDBACK RULES:
+
+- Keep feedback concise and educational.
+- Explain why the answer is correct or incorrect.
+- If incorrect, briefly mention the key concept that was missing.
+- Do not mention internal evaluation rules.
+
+EXACT_REFERENCE RULES:
+
+- Extract and copy-paste the exact sentence(s) from the reference context that support the evaluation.
+- Do not paraphrase.
+- Do not modify wording.
+- If no supporting sentence exists, return an empty string.
+
+Return ONLY valid JSON:
+
+{{
+    "score": 0,
+    "feedback": "...",
+    "exact_reference": "..."
+}}
+"""
 
     response = client.chat.completions.create(
         model=MODEL_NAME,
