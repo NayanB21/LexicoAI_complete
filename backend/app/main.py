@@ -19,7 +19,7 @@ from starlette.requests import Request
 # ---------------------------------------------------------------------------
 _raw_origins = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,https://lexicoai.netlify.app"
+    "http://localhost:5173,http://127.0.0.1:5173,https://lexicoai.netlify.app,https://ai-viva-proff-nayan.netlify.app"
 )
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
