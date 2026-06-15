@@ -1,33 +1,37 @@
 from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-import os
+from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
 from langchain_core.documents import Document
+import chromadb
+import uuid
 
-# Hum completely free aur local HuggingFace embeddings use kar rahe hain
-# Yeh RAG ke liye sabse fast aur popular open-source model hai
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+# Use ChromaDB's built-in ONNX embedding — same all-MiniLM-L6-v2 model
+# but runs on onnxruntime instead of PyTorch (saves ~2.4GB on Railway!)
+_chroma_ef = ONNXMiniLM_L6_V2()
 
-def create_vector_store(chunks: list[Document], collection_name: str = "viva_docs"):
+class _OnnxEmbeddings:
+    """Thin LangChain-compatible wrapper around ChromaDB's ONNX embedding function."""
+    def embed_documents(self, texts):
+        return _chroma_ef(texts)
+    def embed_query(self, text):
+        return _chroma_ef([text])[0]
+
+_embeddings = _OnnxEmbeddings()
+
+def create_vector_store(chunks):
     """
-    Takes text chunks, converts them to vectors, and stores them in ChromaDB.
+    Creates an in-memory Chroma vector store from document chunks.
+    Uses ONNX-based all-MiniLM-L6-v2 — no PyTorch required.
     """
-    try:
-        print("🧠 Converting chunks to Vectors & saving to ChromaDB...")
-        
-        # Hum database ko apne backend folder mein ek 'chroma_db' naam ke folder mein save karenge
-        # persist_directory = "./chroma_db"
-        
-        # ChromaDB vector store create karna
-        vectorstore = Chroma.from_documents(
-            documents=chunks, 
-            embedding=embeddings,
-            # persist_directory=persist_directory,
-            collection_name=collection_name
-        )
-        
-        print(f"✅ Successfully stored {len(chunks)} chunks in Vector DB!")
-        return vectorstore
-        
-    except Exception as e:
-        print(f"❌ Vector DB creation failed: {e}")
-        return None
+    client = chromadb.EphemeralClient()
+    collection_name = f"viva_{uuid.uuid4().hex[:8]}"
+
+    texts = [chunk.page_content for chunk in chunks]
+    metadatas = [chunk.metadata for chunk in chunks]
+
+    vectorstore = Chroma(
+        client=client,
+        collection_name=collection_name,
+        embedding_function=_embeddings,
+    )
+    vectorstore.add_texts(texts=texts, metadatas=metadatas)
+    return vectorstore
