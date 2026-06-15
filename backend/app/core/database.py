@@ -23,9 +23,9 @@ async def connect_to_mongo():
         await db_instance.client.admin.command('ping')
         
         db_instance.db = db_instance.client[DATABASE_NAME]
-        print("✅ Successfully connected to MongoDB! (Verified with Ping)")
+        print("[OK] Successfully connected to MongoDB! (Verified with Ping)")
     except Exception as e:
-        print(f"❌ Failed to connect to MongoDB. Server chalu nahi hai!")
+        print(f"[ERROR] Failed to connect to MongoDB!")
         print(f"Error detail: {e}")
 
 async def close_mongo_connection():

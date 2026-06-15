@@ -6,6 +6,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# LlamaParse SDK expects LLAMA_CLOUD_API_KEY, but this project's .env uses LLAMA_PARSE_API_KEY.
+# Read whichever is available.
+LLAMA_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY") or os.getenv("LLAMA_PARSE_API_KEY") or ""
+
 async def pdf_text_extractor(pdf_bytes: bytes) -> str:
     """
     Industry-grade LlamaParse extractor that returns perfect Markdown.
@@ -19,7 +23,11 @@ async def pdf_text_extractor(pdf_bytes: bytes) -> str:
             temp_pdf_path = temp_pdf.name
 
         # 2. LlamaParse ka engine setup karo (Markdown output ke liye)
+        if not LLAMA_API_KEY:
+            raise ValueError("LLAMA_PARSE_API_KEY is not set in .env file!")
+        
         parser = LlamaParse(
+            api_key=LLAMA_API_KEY,
             result_type="markdown",  # RAG ka sabse best format
             verbose=True,
             language="en"
@@ -38,7 +46,8 @@ async def pdf_text_extractor(pdf_bytes: bytes) -> str:
         return extracted_text.strip()
 
     except Exception as e:
-        print(f"❌ LlamaParse extraction failed: {e}")
+        print(f"[ERROR] LlamaParse extraction failed: {e}")
+        print(f"[HINT] Ensure LLAMA_PARSE_API_KEY is valid in backend/.env")
         # Agar error aati hai temp file delete karna mat bhoolna
         if 'temp_pdf_path' in locals() and os.path.exists(temp_pdf_path):
             os.remove(temp_pdf_path)
